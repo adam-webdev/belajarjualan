@@ -31,47 +31,102 @@ class ProductController extends Controller
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'category_id' => 'required|exists:categories,id',
-            'name' => 'required|string|max:255',
-            'description' => 'required|string',
-            'base_price' => 'required|numeric|min:0',
-            'has_variant' => 'boolean',
-            'is_active' => 'boolean',
-            'images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-        ]);
-
-        $validated['slug'] = Str::slug($validated['name']) . '-' . Str::random(5);
-        $validated['has_variant'] = $request->has('has_variant');
-        $validated['is_active'] = $request->has('is_active');
-
-        // Ensure base_price is properly formatted as decimal
-        $priceInput = str_replace(',', '.', $request->input('base_price'));
-        $validated['base_price'] = number_format((float) $priceInput, 2, '.', '');
-
-        DB::beginTransaction();
         try {
+            $messages = [
+                'category_id.required' => 'Kategori produk harus dipilih',
+                'category_id.exists' => 'Kategori yang dipilih tidak valid',
+                'name.required' => 'Nama produk harus diisi',
+                'name.string' => 'Nama produk harus berupa teks',
+                'name.max' => 'Nama produk maksimal 255 karakter',
+                'description.required' => 'Deskripsi produk harus diisi',
+                'description.string' => 'Deskripsi produk harus berupa teks',
+                'base_price.required' => 'Harga dasar produk harus diisi',
+                'base_price.numeric' => 'Harga dasar produk harus berupa angka',
+                'base_price.min' => 'Harga dasar produk minimal 0',
+                'has_variant.boolean' => 'Status varian produk tidak valid',
+                'is_active.boolean' => 'Status aktif produk tidak valid',
+                'images.*.image' => 'File yang diunggah harus berupa gambar',
+                'images.*.mimes' => 'Format gambar harus jpeg, png, jpg, gif, webp, atau jfif',
+                'images.*.max' => 'Ukuran gambar maksimal 4MB'
+            ];
+
+            $validated = $request->validate([
+                'category_id' => 'required|exists:categories,id',
+                'name' => 'required|string|max:255',
+                'description' => 'required|string',
+                'base_price' => 'required|numeric|min:0',
+                'has_variant' => 'sometimes|boolean',
+                'is_active' => 'sometimes|boolean',
+                'images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp,jfif|max:4096',
+            ], $messages);
+
+            // Format price properly
+            $priceInput = str_replace(',', '.', $request->input('base_price'));
+            $validated['base_price'] = number_format((float) $priceInput, 2, '.', '');
+
+            // Generate unique slug
+            $validated['slug'] = Str::slug($validated['name']) . '-' . Str::random(5);
+
+            // Handle boolean fields properly
+            $validated['has_variant'] = $request->has('has_variant');
+            $validated['is_active'] = $request->has('is_active');
+
+            DB::beginTransaction();
+
+            // Create product
             $product = Product::create($validated);
 
             // Handle image uploads
             if ($request->hasFile('images')) {
                 foreach ($request->file('images') as $index => $image) {
-                    $path = $image->store('products', 'public');
+                    try {
+                        $path = $image->store('products', 'public');
 
-                    $product->images()->create([
-                        'image_path' => $path,
-                        'is_primary' => $index === 0,  // First image is primary
-                    ]);
+                        $product->images()->create([
+                            'image_path' => $path,
+                            'is_primary' => $index === 0,  // First image is primary
+                        ]);
+                    } catch (\Exception $e) {
+                        \Log::error('Failed to upload image: ' . $e->getMessage());
+                        throw new \Exception('Gagal mengunggah satu atau lebih gambar: ' . $e->getMessage());
+                    }
                 }
             }
 
             DB::commit();
-            return redirect()->route('admin.products.show', $product)
-                ->with('success', 'Product created successfully.');
+
+            // Log success
+            \Log::info('Product created successfully', [
+                'product_id' => $product->id,
+                'name' => $product->name,
+                'user_id' => auth()->id()
+            ]);
+
+            return redirect()
+                ->route('admin.products.show', $product)
+                ->with('success', 'Produk berhasil dibuat.');
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            DB::rollBack();
+            \Log::error('Product validation failed', [
+                'errors' => $e->errors(),
+                'input' => $request->except('images')
+            ]);
+            return redirect()
+                ->back()
+                ->withErrors($e->errors())
+                ->withInput();
+
         } catch (\Exception $e) {
             DB::rollBack();
-            return redirect()->back()->withInput()
-                ->with('error', 'Failed to create product: ' . $e->getMessage());
+            \Log::error('Failed to create product: ' . $e->getMessage(), [
+                'exception' => $e,
+                'input' => $request->except('images')
+            ]);
+            return redirect()
+                ->back()
+                ->withInput()
+                ->with('error', 'Gagal membuat produk: ' . $e->getMessage());
         }
     }
 
@@ -90,53 +145,73 @@ class ProductController extends Controller
 
     public function update(Request $request, Product $product)
     {
+        $messages = [
+            'category_id.required' => 'Kategori produk harus dipilih',
+            'category_id.exists' => 'Kategori yang dipilih tidak valid',
+            'name.required' => 'Nama produk harus diisi',
+            'name.string' => 'Nama produk harus berupa teks',
+            'name.max' => 'Nama produk maksimal 255 karakter',
+            'description.required' => 'Deskripsi produk harus diisi',
+            'description.string' => 'Deskripsi produk harus berupa teks',
+            'base_price.required' => 'Harga dasar produk harus diisi',
+            'base_price.numeric' => 'Harga dasar produk harus berupa angka',
+            'base_price.min' => 'Harga dasar produk minimal 0',
+            'is_active.boolean' => 'Status aktif produk tidak valid',
+            'has_variant.boolean' => 'Status varian produk tidak valid'
+        ];
+
+        $request->validate([
+            'category_id' => 'required|exists:categories,id',
+            'name' => 'required|string|max:255',
+            'description' => 'required|string',
+            'base_price' => 'required|numeric|min:0',
+            'is_active' => 'sometimes|boolean',
+            'has_variant' => 'sometimes|boolean',
+        ], $messages);
+
+        DB::beginTransaction();
         try {
-            $validated = $request->validate([
-                'category_id' => 'required|exists:categories,id',
-                'name' => 'required|string|max:255',
-                'description' => 'required|string',
-                'base_price' => 'required|numeric|min:0',
-                'is_active' => 'boolean',
-            ]);
+            // Build data array for update
+            $data = [
+                'category_id' => $request->category_id,
+                'name' => $request->name,
+                'description' => $request->description,
+                'base_price' => $request->base_price,
+                'is_active' => $request->has('is_active') ? 1 : 0,
+                'has_variant' => $request->has('has_variant') ? 1 : 0,
+            ];
 
-            // Process boolean fields
-            $validated['is_active'] = $request->has('is_active') ? true : false;
-
-            // Don't change has_variant if product already has variants
-            if (!$product->options()->exists()) {
-                $validated['has_variant'] = $request->has('has_variant') ? true : false;
+            // Jika produk memiliki opsi, pastikan has_variant tetap 1
+            if ($product->options()->exists()) {
+                $data['has_variant'] = 1;
             }
 
-            // Set base_price directly from the validated input
-            // No need for additional formatting as it's already validated as numeric
-            $validated['base_price'] = (float)$request->input('base_price');
+            // Update the product
+            $product->update($data);
 
-            $product->update($validated);
-
-            return redirect()->route('admin.products.show', $product)
-                ->with('success', 'Product updated successfully.');
-
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            return redirect()->back()->withErrors($e->validator)->withInput()
-                ->with('error', 'Please fix the errors in the form.');
+            DB::commit();
+            return redirect()
+                ->route('admin.products.show', $product)
+                ->with('success', 'Produk berhasil diperbarui.');
         } catch (\Exception $e) {
-            return redirect()->back()->withInput()
-                ->with('error', 'Failed to update product: ' . $e->getMessage());
+            DB::rollBack();
+            return redirect()
+                ->back()
+                ->withInput()
+                ->with('error', 'Gagal memperbarui produk: ' . $e->getMessage());
         }
     }
 
     public function destroy(Product $product)
     {
-        // Check if product has orders
-        if ($product->orderDetails()->exists()) {
-            return redirect()->route('admin.products.index')
-                ->with('error', 'Cannot delete product with existing orders.');
-        }
-
         // Delete all related images from storage
         foreach ($product->images as $image) {
             Storage::disk('public')->delete($image->image_path);
         }
+
+        // Delete all related options and combinations
+        $product->options()->delete();
+        $product->combinations()->delete();
 
         $product->delete();
 
@@ -148,7 +223,7 @@ class ProductController extends Controller
     public function addImages(Request $request, Product $product)
     {
         $request->validate([
-            'images.*' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'images.*' => 'required|image|mimes:jpeg,png,jpg,gif,webp,jfif|max:4096',
         ]);
 
         DB::beginTransaction();
@@ -507,5 +582,40 @@ class ProductController extends Controller
         $combination->delete();
 
         return redirect()->back()->with('success', 'Combination deleted successfully.');
+    }
+
+    /**
+     * Get product combinations for API
+     */
+    public function getCombinations(Product $product, Request $request)
+    {
+        try {
+            $combinations = $product->combinations()
+                ->with(['values.optionValue.option'])
+                ->get();
+
+            return response()->json($combinations);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error loading combinations: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get product data for API
+     */
+    public function getProductData(Product $product, Request $request)
+    {
+        try {
+            $product->load('category', 'images');
+            return response()->json($product);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error loading product data: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }

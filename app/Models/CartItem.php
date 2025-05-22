@@ -12,11 +12,11 @@ class CartItem extends Model
     protected $fillable = [
         'cart_id',
         'product_combination_id',
-        'quantity',
+        'quantity'
     ];
 
     protected $casts = [
-        'quantity' => 'integer',
+        'quantity' => 'integer'
     ];
 
     // Relationships
@@ -30,20 +30,22 @@ class CartItem extends Model
         return $this->belongsTo(ProductCombination::class);
     }
 
+    public function product()
+    {
+        return $this->hasOneThrough(
+            Product::class,
+            ProductCombination::class,
+            'id', // Foreign key on product_combinations table
+            'id', // Foreign key on products table
+            'product_combination_id', // Local key on cart_items table
+            'product_id' // Local key on product_combinations table
+        );
+    }
+
     // Attributes
-    public function getProductAttribute()
-    {
-        return $this->productCombination->product;
-    }
-
-    public function getPriceAttribute()
-    {
-        return $this->productCombination->price;
-    }
-
     public function getSubtotalAttribute()
     {
-        return $this->quantity * $this->price;
+        return $this->price * $this->quantity;
     }
 
     public function getNameAttribute()

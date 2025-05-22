@@ -20,6 +20,13 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        $this->call([
+            UserSeeder::class,
+            CategorySeeder::class,
+            ProductSeeder::class,
+            ShippingMethodSeeder::class,
+        ]);
+
         // Truncate tables in reverse order to avoid constraint violations
         DB::statement('SET FOREIGN_KEY_CHECKS=0;');
         DB::table('wishlists')->truncate();

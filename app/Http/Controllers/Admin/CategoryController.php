@@ -13,7 +13,8 @@ class CategoryController extends Controller
     public function index()
     {
         $categories = Category::latest()->get();
-        return view('admin.categories.index', compact('categories'));
+        $trashedCount = Category::onlyTrashed()->count();
+        return view('admin.categories.index', compact('categories', 'trashedCount'));
     }
 
     public function create()
@@ -31,6 +32,9 @@ class CategoryController extends Controller
         ]);
 
         $validated['slug'] = Str::slug($validated['name']);
+
+        // Process is_active checkbox
+        $validated['is_active'] = $request->has('is_active');
 
         if ($request->hasFile('image')) {
             $validated['image'] = $request->file('image')->store('categories', 'public');
@@ -64,6 +68,9 @@ class CategoryController extends Controller
 
         $validated['slug'] = Str::slug($validated['name']);
 
+        // Process is_active checkbox
+        $validated['is_active'] = $request->has('is_active');
+
         if ($request->hasFile('image')) {
             if ($category->image) {
                 Storage::disk('public')->delete($category->image);
@@ -77,11 +84,18 @@ class CategoryController extends Controller
             ->with('success', 'Category updated successfully.');
     }
 
-    public function destroy(Category $category)
+    public function destroy(Category $category, Request $request)
     {
-        if ($category->products()->exists()) {
+        $forceDelete = $request->has('force_delete');
+
+        if ($category->products()->exists() && !$forceDelete) {
             return redirect()->route('admin.categories.index')
-                ->with('error', 'Cannot delete category with existing products.');
+                ->with('error', 'Cannot delete category with existing products. Use force delete option to remove category and set related products to no category.');
+        }
+
+        // If force delete, update products to have no category
+        if ($forceDelete && $category->products()->exists()) {
+            $category->products()->update(['category_id' => null]);
         }
 
         if ($category->image) {
@@ -92,6 +106,53 @@ class CategoryController extends Controller
 
         return redirect()->route('admin.categories.index')
             ->with('success', 'Category deleted successfully.');
+    }
+
+    public function batchDelete(Request $request)
+    {
+        $categoryIds = $request->input('categories', []);
+        $forceDelete = $request->has('force_delete');
+
+        if (empty($categoryIds)) {
+            return redirect()->route('admin.categories.index')
+                ->with('error', 'No categories selected for deletion.');
+        }
+
+        $categories = Category::whereIn('id', $categoryIds)->get();
+        $productsExist = false;
+
+        // Check if any selected categories have products
+        foreach ($categories as $category) {
+            if ($category->products()->exists()) {
+                $productsExist = true;
+                break;
+            }
+        }
+
+        // If categories have products and not force deleting, return with error
+        if ($productsExist && !$forceDelete) {
+            return redirect()->route('admin.categories.index')
+                ->with('error', 'Some categories have products. Use force delete option to remove categories and set related products to no category.');
+        }
+
+        // Process deletion
+        foreach ($categories as $category) {
+            // If force delete, update products to have no category
+            if ($forceDelete && $category->products()->exists()) {
+                $category->products()->update(['category_id' => null]);
+            }
+
+            // Delete category image if it exists
+            if ($category->image) {
+                Storage::disk('public')->delete($category->image);
+            }
+
+            $category->delete();
+        }
+
+        $count = count($categories);
+        return redirect()->route('admin.categories.index')
+            ->with('success', "{$count} categories deleted successfully.");
     }
 
     public function toggleStatus(Category $category)
@@ -106,5 +167,99 @@ class CategoryController extends Controller
     {
         $products = $category->products()->with(['images'])->latest()->get();
         return view('admin.categories.products', compact('category', 'products'));
+    }
+
+    /**
+     * Display a listing of trashed categories.
+     */
+    public function trash()
+    {
+        $trashedCategories = Category::onlyTrashed()->latest()->get();
+        return view('admin.categories.trash', compact('trashedCategories'));
+    }
+
+    /**
+     * Restore a soft-deleted category.
+     */
+    public function restore($id)
+    {
+        $category = Category::onlyTrashed()->findOrFail($id);
+        $category->restore();
+
+        return redirect()->route('admin.categories.trash')
+            ->with('success', 'Category restored successfully.');
+    }
+
+    /**
+     * Permanently delete a soft-deleted category.
+     */
+    public function forceDelete($id)
+    {
+        $category = Category::onlyTrashed()->findOrFail($id);
+
+        if ($category->image) {
+            Storage::disk('public')->delete($category->image);
+        }
+
+        // If category has products, set their category_id to null
+        if ($category->products()->exists()) {
+            $category->products()->update(['category_id' => null]);
+        }
+
+        $category->forceDelete();
+
+        return redirect()->route('admin.categories.trash')
+            ->with('success', 'Category permanently deleted.');
+    }
+
+    /**
+     * Batch restore categories from trash.
+     */
+    public function batchRestore(Request $request)
+    {
+        $categoryIds = $request->input('categories', []);
+
+        if (empty($categoryIds)) {
+            return redirect()->route('admin.categories.trash')
+                ->with('error', 'No categories selected for restoration.');
+        }
+
+        Category::onlyTrashed()->whereIn('id', $categoryIds)->restore();
+
+        $count = count($categoryIds);
+        return redirect()->route('admin.categories.trash')
+            ->with('success', "{$count} categories restored successfully.");
+    }
+
+    /**
+     * Batch force delete categories from trash.
+     */
+    public function batchForceDelete(Request $request)
+    {
+        $categoryIds = $request->input('categories', []);
+
+        if (empty($categoryIds)) {
+            return redirect()->route('admin.categories.trash')
+                ->with('error', 'No categories selected for deletion.');
+        }
+
+        $categories = Category::onlyTrashed()->whereIn('id', $categoryIds)->get();
+
+        foreach ($categories as $category) {
+            if ($category->image) {
+                Storage::disk('public')->delete($category->image);
+            }
+
+            // If category has products, set their category_id to null
+            if ($category->products()->exists()) {
+                $category->products()->update(['category_id' => null]);
+            }
+
+            $category->forceDelete();
+        }
+
+        $count = count($categories);
+        return redirect()->route('admin.categories.trash')
+            ->with('success', "{$count} categories permanently deleted.");
     }
 }

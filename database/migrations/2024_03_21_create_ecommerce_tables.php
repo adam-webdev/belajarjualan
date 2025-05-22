@@ -86,7 +86,7 @@ return new class extends Migration
             $table->string('sku')->unique();
             $table->decimal('price', 12, 2);
             $table->integer('stock');
-            $table->decimal('weight', 8, 2); // in grams
+            $table->decimal('weight', 8, 2)->default(1.00); // in grams, default 1kg
             $table->timestamps();
         });
 
@@ -175,6 +175,10 @@ return new class extends Migration
         Schema::create('carts', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->decimal('subtotal', 12, 2)->default(0);
+            $table->decimal('shipping_cost', 12, 2)->default(0);
+            $table->decimal('discount_amount', 12, 2)->default(0);
+            $table->decimal('total', 12, 2)->default(0);
             $table->timestamps();
         });
 
@@ -183,6 +187,7 @@ return new class extends Migration
             $table->foreignId('cart_id')->constrained()->onDelete('cascade');
             $table->foreignId('product_combination_id')->constrained()->onDelete('cascade');
             $table->integer('quantity');
+            $table->decimal('price', 12, 2);
             $table->timestamps();
         });
 

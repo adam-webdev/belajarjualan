@@ -65,8 +65,8 @@
                                     <div class="col-md-9">
                                         <div class="input-group">
                                             <span class="input-group-text">Rp</span>
-                                            <input type="number" min="0" step="0.01" class="form-control @error('base_price') is-invalid @enderror"
-                                                name="base_price" value="{{ old('base_price', $product->base_price ?? 0) }}"
+                                            <input type="text" class="form-control @error('base_price') is-invalid @enderror"
+                                                name="base_price" value="{{ old('base_price', $product->base_price) }}"
                                                 placeholder="Base Price">
                                             @error('base_price')
                                                 <div class="invalid-feedback d-block">{{ $message }}</div>
@@ -95,22 +95,22 @@
                                         <h5 class="card-title">Product Settings</h5>
                                     </div>
                                     <div class="card-body">
-                                        @if(!$product->options()->exists())
                                         <div class="form-check form-switch mb-3">
-                                            <input class="form-check-input" type="checkbox" id="has_variant" name="has_variant" {{ old('has_variant', $product->has_variant) ? 'checked' : '' }}>
+                                            <input class="form-check-input" type="checkbox" id="has_variant" name="has_variant" value="1" {{ old('has_variant', $product->has_variant) == 1 ? 'checked' : '' }} {{ $product->options()->exists() ? 'disabled' : '' }}>
                                             <label class="form-check-label" for="has_variant">Has Variants</label>
                                         </div>
+                                        @if($product->options()->exists())
+                                        <div class="alert alert-info">
+                                            <small>This product has options/variants. To disable variants, please remove all options first.</small>
+                                        </div>
+                                        @else
                                         <small class="text-muted d-block mb-3">
                                             Enable this if your product has variants like size, color, etc.
                                         </small>
-                                        @else
-                                        <div class="alert alert-info">
-                                            This product has options/variants and cannot change this setting.
-                                        </div>
                                         @endif
 
                                         <div class="form-check form-switch">
-                                            <input class="form-check-input" type="checkbox" id="is_active" name="is_active" {{ old('is_active', $product->is_active) ? 'checked' : '' }}>
+                                            <input class="form-check-input" type="checkbox" id="is_active" name="is_active" value="1" {{ old('is_active', $product->is_active) == 1 ? 'checked' : '' }}>
                                             <label class="form-check-label" for="is_active">Active Status</label>
                                         </div>
                                         <small class="text-muted d-block mb-3">

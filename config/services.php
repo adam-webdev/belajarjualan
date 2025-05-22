@@ -35,4 +35,21 @@ return [
         ],
     ],
 
+    'rajaongkir' => [
+        'api_key' => env('RAJAONGKIR_API_KEY'),
+        'base_url' => env('RAJAONGKIR_BASE_URL', 'https://api-sandbox.collaborator.komerce.id'),
+        'tariff_url' => env('RAJAONGKIR_TARIFF_URL', 'https://api-sandbox.collaborator.komerce.id/tariff/api/v1'),
+        'destination_url' => env('RAJAONGKIR_DESTINATION_URL', 'https://api-sandbox.collaborator.komerce.id/tariff/api/v1/destination'),
+        'store' => [
+            'province_id' => '9', // Jawa Barat
+            'province_name' => 'Jawa Barat',
+            'city_id' => '54', // Bekasi
+            'city_name' => 'Bekasi',
+            'district_id' => '733', // Bekasi Kota
+            'district_name' => 'Bekasi Kota',
+            'postal_code' => '17141',
+            'address' => 'Jl. Raya Bekasi No. 123'
+        ],
+    ],
+
 ];

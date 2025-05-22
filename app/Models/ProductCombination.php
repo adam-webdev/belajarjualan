@@ -33,6 +33,12 @@ class ProductCombination extends Model
         return $this->hasMany(ProductCombinationValue::class);
     }
 
+    // Alias for combinationValues - to fix compatibility with existing code
+    public function values()
+    {
+        return $this->hasMany(ProductCombinationValue::class);
+    }
+
     public function optionValues()
     {
         return $this->belongsToMany(
@@ -96,5 +102,15 @@ class ProductCombination extends Model
                 return $value->option->name . ': ' . $value->value;
             })
             ->implode(', ');
+    }
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::deleting(function ($productCombination) {
+            // Delete related wishlist items
+            Wishlist::where('product_combination_id', $productCombination->id)->delete();
+        });
     }
 }

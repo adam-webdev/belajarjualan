@@ -57,7 +57,7 @@ class FlashSaleItem extends Model
 
     public function getRegularPriceAttribute()
     {
-        return $this->productCombination->price;
+        return $this->productCombination ? $this->productCombination->price : 0;
     }
 
     public function getDiscountPercentAttribute()

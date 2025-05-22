@@ -9,6 +9,11 @@ class Address extends Model
 {
     use HasFactory;
 
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var array<int, string>
+     */
     protected $fillable = [
         'user_id',
         'recipient_name',
@@ -18,13 +23,21 @@ class Address extends Model
         'district',
         'postal_code',
         'address_detail',
-        'is_default'
+        'is_default',
     ];
 
+    /**
+     * The attributes that should be cast.
+     *
+     * @var array<string, string>
+     */
     protected $casts = [
-        'is_default' => 'boolean'
+        'is_default' => 'boolean',
     ];
 
+    /**
+     * Get the user that owns the address.
+     */
     public function user()
     {
         return $this->belongsTo(User::class);

@@ -11,6 +11,24 @@ class Cart extends Model
 
     protected $fillable = [
         'user_id',
+        'subtotal',
+        'discount_amount',
+        'shipping_cost',
+        'total'
+    ];
+
+    protected $attributes = [
+        'shipping_cost' => 0,
+        'discount_amount' => 0,
+        'subtotal' => 0,
+        'total' => 0
+    ];
+
+    protected $casts = [
+        'shipping_cost' => 'decimal:2',
+        'discount_amount' => 'decimal:2',
+        'subtotal' => 'decimal:2',
+        'total' => 'decimal:2'
     ];
 
     // Relationships
@@ -28,8 +46,13 @@ class Cart extends Model
     public function getSubtotalAttribute()
     {
         return $this->items->sum(function ($item) {
-            return $item->quantity * $item->price;
+            return $item->quantity * $item->productCombination->price;
         });
+    }
+
+    public function getTotalAttribute()
+    {
+        return $this->subtotal - $this->discount_amount + $this->shipping_cost;
     }
 
     public function getTotalItemsAttribute()

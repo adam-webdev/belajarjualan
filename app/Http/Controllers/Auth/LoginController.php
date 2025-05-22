@@ -59,10 +59,11 @@ class LoginController extends Controller
     protected function authenticated(Request $request, $user)
     {
         if ($user->role === 'admin') {
-            return redirect()->route('admin.dashboard');
+            return redirect('/dashboard');
         }
 
-        return redirect()->intended($this->redirectPath());
+        // For regular users, redirect back to the homepage
+        return redirect('/');
     }
 
     /**
@@ -87,8 +88,21 @@ class LoginController extends Controller
     protected function redirectPath()
     {
         if (Auth::user()->role === 'admin') {
-            return route('admin.dashboard');
+            return '/dashboard';
         }
-        return '/dashboard';
+        return '/';
+    }
+
+    /**
+     * Override the attempt login method to always remember users
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return bool
+     */
+    protected function attemptLogin(Request $request)
+    {
+        return $this->guard()->attempt(
+            $this->credentials($request), true // Always remember the user
+        );
     }
 }

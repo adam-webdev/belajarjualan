@@ -33,6 +33,49 @@
         .choices__list--dropdown {
             z-index: 999;
         }
+
+        /* User dropdown styles */
+        .user-dropdown {
+            text-decoration: none;
+            color: #25396f;
+        }
+        .user-dropdown:hover {
+            color: #435ebe;
+        }
+        .avatar {
+            display: inline-flex;
+            border-radius: 50%;
+            overflow: hidden;
+            vertical-align: middle;
+        }
+        .avatar.avatar-md {
+            width: 40px;
+            height: 40px;
+        }
+        .avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* Notification styles */
+        .notification-dropdown {
+            width: 320px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .notification-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .dropdown-item:active, .dropdown-item:focus, .dropdown-item:hover {
+            background-color: #f8f9fa;
+            color: #1e1e1e;
+        }
     </style>
 
     @yield('css')
@@ -86,7 +129,48 @@
                             </ul>
                         </li>
 
+                        <!-- <li class="sidebar-item has-sub {{ request()->routeIs('admin.shipping.*') ? 'active' : '' }}">
+                            <a href="#" class='sidebar-link'>
+                                <i class="bi bi-truck"></i>
+                                <span>Shipping</span>
+                            </a>
+                            <ul class="submenu">
+                                <li class="submenu-item {{ request()->routeIs('admin.shipping.methods.*') ? 'active' : '' }}">
+                                    <a href="{{ route('admin.shipping.methods.index') }}">Shipping Methods</a>
+                                </li>
+                                <li class="submenu-item {{ request()->routeIs('admin.shipping.costs.*') ? 'active' : '' }}">
+                                    <a href="{{ route('admin.shipping.costs.index') }}">Shipping Costs</a>
+                                </li>
+                            </ul>
+                        </li>
 
+                        <li class="sidebar-item {{ request()->routeIs('admin.coupons.*') ? 'active' : '' }}">
+                            <a href="{{ route('admin.coupons.index') }}" class='sidebar-link'>
+                                <i class="bi bi-percent"></i>
+                                <span>Coupons</span>
+                            </a>
+                        </li>
+
+                        <li class="sidebar-item {{ request()->routeIs('admin.flash-sales.*') ? 'active' : '' }}">
+                            <a href="{{ route('admin.flash-sales.index') }}" class='sidebar-link'>
+                                <i class="bi bi-lightning-charge"></i>
+                                <span>Flash Sales</span>
+                            </a>
+                        </li> -->
+
+                        <li class="sidebar-item {{ request()->routeIs('admin.orders.*') ? 'active' : '' }}">
+                            <a href="{{ route('admin.orders.index') }}" class='sidebar-link'>
+                                <i class="bi bi-bag"></i>
+                                <span>Orders</span>
+                            </a>
+                        </li>
+
+                        <li class="sidebar-item {{ request()->routeIs('admin.payments.*') ? 'active' : '' }}">
+                            <a href="{{ route('admin.payments.index') }}" class='sidebar-link'>
+                                <i class="bi bi-credit-card"></i>
+                                <span>Payments</span>
+                            </a>
+                        </li>
 
                         <li class="sidebar-title">Pages</li>
 
@@ -98,9 +182,108 @@
         </div>
         <div id="main">
             <header class="mb-3">
+                <div class="d-flex justify-content-between align-items-center">
                 <a href="#" class="burger-btn d-block d-xl-none">
                     <i class="bi bi-justify fs-3"></i>
                 </a>
+
+                    <!-- User dropdown menu -->
+                    <div class="d-flex align-items-center">
+                        <!-- Notification dropdown -->
+                        <div class="dropdown me-3">
+                            <a href="#" class="position-relative" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-bell fs-4"></i>
+                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                    3
+                                    <span class="visually-hidden">unread notifications</span>
+                                </span>
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end shadow notification-dropdown">
+                                <li>
+                                    <h6 class="dropdown-header">Notifications</h6>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item d-flex align-items-center" href="#">
+                                        <div class="notification-icon bg-primary">
+                                            <i class="bi bi-cart-fill text-white"></i>
+                                        </div>
+                                        <div class="ms-3">
+                                            <p class="mb-0 fw-bold">New order received</p>
+                                            <small class="text-muted">5 minutes ago</small>
+                                        </div>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item d-flex align-items-center" href="#">
+                                        <div class="notification-icon bg-success">
+                                            <i class="bi bi-check-circle-fill text-white"></i>
+                                        </div>
+                                        <div class="ms-3">
+                                            <p class="mb-0 fw-bold">Order #1234 completed</p>
+                                            <small class="text-muted">2 hours ago</small>
+                                        </div>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item d-flex align-items-center" href="#">
+                                        <div class="notification-icon bg-warning">
+                                            <i class="bi bi-exclamation-triangle-fill text-white"></i>
+                                        </div>
+                                        <div class="ms-3">
+                                            <p class="mb-0 fw-bold">Low stock alert</p>
+                                            <small class="text-muted">1 day ago</small>
+                                        </div>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item text-center" href="#">
+                                        View all notifications
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <!-- User dropdown -->
+                        <div class="dropdown">
+                            <a href="#" class="user-dropdown d-flex align-items-center" data-bs-toggle="dropdown" aria-expanded="false">
+                                <div class="avatar avatar-md">
+                                    <img src="{{ asset('assets/images/faces/1.jpg') }}" alt="Avatar">
+                                </div>
+                                <div class="d-none d-md-block d-lg-inline-block ms-2 me-1">
+                                    <span class="fw-bold">{{ Auth::user()->name }}</span>
+                                </div>
+                                <i class="bi bi-caret-down-fill ms-1"></i>
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end shadow">
+                                <li>
+                                    <h6 class="dropdown-header">Halo, {{ Auth::user()->name }}!</h6>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ route('admin.users.edit', Auth::id()) }}">
+                                        <i class="bi bi-person-fill me-2"></i> My Profile
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ route('admin.users.show', Auth::id()) }}">
+                                        <i class="bi bi-gear-fill me-2"></i> Account Settings
+                                    </a>
+                                </li>
+                                <li>
+                                    <hr class="dropdown-divider">
+                                </li>
+                                <li>
+                                    <a class="dropdown-item text-danger" href="{{ route('custom.logout') }}"
+                                       onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
+                                        <i class="bi bi-box-arrow-right me-2"></i> Logout
+                                    </a>
+                                    <form id="logout-form" action="{{ route('custom.logout') }}" method="POST" class="d-none">
+                                        @csrf
+                                    </form>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
             </header>
 
             <div class="page-heading">

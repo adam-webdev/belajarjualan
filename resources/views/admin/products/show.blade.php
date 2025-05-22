@@ -250,122 +250,57 @@
                         <!-- Combinations Tab -->
                         <div class="tab-pane fade" id="combinations" role="tabpanel">
                             <div class="row mt-3">
-                                <div class="col-md-5">
+                                <div class="col-12">
                                     <div class="card shadow-sm">
-                                        <div class="card-header">
-                                            <h5 class="card-title">Add New Combination</h5>
+                                        <div class="card-header d-flex justify-content-between align-items-center">
+                                            <h5 class="card-title mb-0">Product Combinations</h5>
+                                            <a href="{{ route('admin.products.combinations.manage', $product) }}" class="btn btn-primary">
+                                                <i class="bi bi-plus"></i> Manage Combinations
+                                            </a>
                                         </div>
                                         <div class="card-body">
-                                            @if($product->options->count() > 0)
-                                            <form action="{{ route('admin.products.combinations.store', $product) }}" method="POST">
-                                                @csrf
-                                                <div class="mb-3">
-                                                    <label>Options</label>
-                                                    @foreach($product->options as $option)
-                                                    <div class="mb-2">
-                                                        <label>{{ $option->name }}</label>
-                                                        <select name="option_values[]" class="choices form-select" required>
-                                                            <option value="">Select {{ $option->name }}</option>
-                                                            @foreach($option->values as $value)
-                                                            <option value="{{ $value->id }}">{{ $value->value }}</option>
+                                            <div class="table-responsive">
+                                                <table class="table table-striped">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>SKU</th>
+                                                            @foreach($product->options as $option)
+                                                            <th>{{ $option->name }}</th>
                                                             @endforeach
-                                                        </select>
-                                                    </div>
-                                                    @endforeach
-                                                </div>
-
-                                                <div class="mb-3">
-                                                    <label for="sku">SKU</label>
-                                                    <input type="text" class="form-control" id="sku" name="sku" required>
-                                                </div>
-
-                                                <div class="mb-3">
-                                                    <label for="price">Price</label>
-                                                    <div class="input-group">
-                                                        <span class="input-group-text">Rp</span>
-                                                        <input type="number" class="form-control" id="price" name="price" min="0" required>
-                                                    </div>
-                                                </div>
-
-                                                <div class="mb-3">
-                                                    <label for="stock">Stock</label>
-                                                    <input type="number" class="form-control" id="stock" name="stock" min="0" required>
-                                                </div>
-
-                                                <div class="mb-3">
-                                                    <label for="weight">Weight (grams)</label>
-                                                    <input type="number" class="form-control" id="weight" name="weight" min="0" required>
-                                                </div>
-
-                                                <button type="submit" class="btn btn-primary">Save Combination</button>
-                                            </form>
-                                            @else
-                                            <div class="alert alert-warning">
-                                                You need to add options before creating combinations.
+                                                            <th>Price</th>
+                                                            <th>Stock</th>
+                                                            <th>Weight</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        @forelse($product->combinations as $combination)
+                                                        <tr>
+                                                            <td>{{ $combination->sku }}</td>
+                                                            @foreach($product->options as $option)
+                                                            <td>
+                                                                @php
+                                                                    $value = $combination->values->first(function($value) use ($option) {
+                                                                        return $value->optionValue->option_id === $option->id;
+                                                                    });
+                                                                @endphp
+                                                                {{ $value ? $value->optionValue->value : '-' }}
+                                                            </td>
+                                                            @endforeach
+                                                            <td>Rp {{ number_format($combination->price, 0, ',', '.') }}</td>
+                                                            <td>{{ $combination->stock }}</td>
+                                                            <td>{{ $combination->weight }}g</td>
+                                                        </tr>
+                                                        @empty
+                                                        <tr>
+                                                            <td colspan="{{ 4 + $product->options->count() }}" class="text-center">
+                                                                No combinations defined yet. Add options first, then manage combinations.
+                                                            </td>
+                                                        </tr>
+                                                        @endforelse
+                                                    </tbody>
+                                                </table>
                                             </div>
-                                            @endif
                                         </div>
-                                    </div>
-                                </div>
-
-                                <div class="col-md-7">
-                                    <h5>Product Combinations</h5>
-                                    <div class="d-flex justify-content-end mb-3">
-                                        <a href="{{ route('admin.products.combinations.manage', $product) }}" class="btn btn-primary">
-                                            <i class="bi bi-gear"></i> Manage All Combinations
-                                        </a>
-                                    </div>
-                                    <div class="table-responsive">
-                                        <table class="table table-hover">
-                                            <thead>
-                                                <tr>
-                                                    <th>Combination</th>
-                                                    <th>SKU</th>
-                                                    <th>Price</th>
-                                                    <th>Stock</th>
-                                                    <th>Actions</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                @forelse($product->combinations as $combination)
-                                                <tr>
-                                                    <td>
-                                                        @foreach($combination->values as $combinationValue)
-                                                        <span class="badge bg-light text-dark">
-                                                            {{ $combinationValue->optionValue->option->name }}: {{ $combinationValue->optionValue->value }}
-                                                        </span>
-                                                        @endforeach
-                                                    </td>
-                                                    <td>{{ $combination->sku }}</td>
-                                                    <td>Rp {{ number_format($combination->price, 0, ',', '.') }}</td>
-                                                    <td>{{ $combination->stock }}</td>
-                                                    <td>
-                                                        <div class="d-flex gap-1">
-                                                            <button type="button" class="btn btn-sm btn-warning edit-combination"
-                                                                data-id="{{ $combination->id }}"
-                                                                data-sku="{{ $combination->sku }}"
-                                                                data-price="{{ $combination->price }}"
-                                                                data-stock="{{ $combination->stock }}"
-                                                                data-weight="{{ $combination->weight }}">
-                                                                <i class="bi bi-pencil"></i>
-                                                            </button>
-                                                            <form action="{{ route('admin.products.combinations.destroy', $combination) }}" method="POST">
-                                                                @csrf
-                                                                @method('DELETE')
-                                                                <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure?')">
-                                                                    <i class="bi bi-trash"></i>
-                                                                </button>
-                                                            </form>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                                @empty
-                                                <tr>
-                                                    <td colspan="5" class="text-center">No combinations available</td>
-                                                </tr>
-                                                @endforelse
-                                            </tbody>
-                                        </table>
                                     </div>
                                 </div>
                             </div>
@@ -377,97 +312,29 @@
         </div>
     </div>
 </div>
-
-<!-- Edit Combination Modal -->
-<div class="modal fade" id="editCombinationModal" tabindex="-1" aria-labelledby="editCombinationModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="editCombinationModalLabel">Edit Combination</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form id="editCombinationForm" method="POST">
-                @csrf
-                @method('PUT')
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="edit_sku">SKU</label>
-                        <input type="text" class="form-control" id="edit_sku" name="sku" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="edit_price">Price</label>
-                        <div class="input-group">
-                            <span class="input-group-text">Rp</span>
-                            <input type="number" class="form-control" id="edit_price" name="price" min="0" required>
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label for="edit_stock">Stock</label>
-                        <input type="number" class="form-control" id="edit_stock" name="stock" min="0" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="edit_weight">Weight (grams)</label>
-                        <input type="number" class="form-control" id="edit_weight" name="weight" min="0" required>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Update</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
 @endsection
 
 @section('js')
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Handle adding option values
-        document.querySelectorAll('.add-option-value').forEach(button => {
-            button.addEventListener('click', function() {
-                const container = document.getElementById('option_values_container');
-                const newRow = document.createElement('div');
-                newRow.className = 'input-group mb-2';
-                newRow.innerHTML = `
-                    <input type="text" class="form-control" name="option_values[]" placeholder="e.g. Red, XL" required>
-                    <button type="button" class="btn btn-outline-danger remove-option-value">
-                        <i class="bi bi-dash"></i>
-                    </button>
-                `;
-                container.appendChild(newRow);
-
-                // Add event listener to the newly created remove button
-                newRow.querySelector('.remove-option-value').addEventListener('click', function() {
-                    container.removeChild(newRow);
-                });
-            });
-        });
-
-        // Handle edit combination modal
-        const editCombinationModal = document.getElementById('editCombinationModal');
-        if (editCombinationModal) {
-            const modal = new bootstrap.Modal(editCombinationModal);
-
-            document.querySelectorAll('.edit-combination').forEach(button => {
-                button.addEventListener('click', function() {
-                    const id = this.getAttribute('data-id');
-                    const sku = this.getAttribute('data-sku');
-                    const price = this.getAttribute('data-price');
-                    const stock = this.getAttribute('data-stock');
-                    const weight = this.getAttribute('data-weight');
-
-                    document.getElementById('edit_sku').value = sku;
-                    document.getElementById('edit_price').value = price;
-                    document.getElementById('edit_stock').value = stock;
-                    document.getElementById('edit_weight').value = weight;
-
-                    document.getElementById('editCombinationForm').action = "{{ route('admin.products.combinations.update', '') }}/" + id;
-
-                    modal.show();
-                });
-            });
-        }
+$(document).ready(function() {
+    // Add option value field
+    $('.add-option-value').click(function() {
+        const container = $('#option_values_container');
+        const newField = `
+            <div class="input-group mb-2">
+                <input type="text" class="form-control" name="option_values[]" placeholder="e.g. Red, XL" required>
+                <button type="button" class="btn btn-outline-danger remove-option-value">
+                    <i class="bi bi-dash"></i>
+                </button>
+            </div>
+        `;
+        container.append(newField);
     });
+
+    // Remove option value field
+    $(document).on('click', '.remove-option-value', function() {
+        $(this).closest('.input-group').remove();
+    });
+});
 </script>
 @endsection

@@ -11,12 +11,21 @@ class ShippingMethod extends Model
 
     protected $fillable = [
         'name',
-        'code',
+        'description',
+        'cost',
         'is_active',
+        'estimated_days'
     ];
 
     protected $casts = [
+        'cost' => 'decimal:2',
         'is_active' => 'boolean',
+        'estimated_days' => 'integer'
+    ];
+
+    protected $attributes = [
+        'is_active' => true,
+        'default_cost' => 0,
     ];
 
     // Relationships

@@ -11,7 +11,7 @@ use Laravel\Sanctum\HasApiTokens;
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable;
+    use  HasFactory, Notifiable;
 
     /**
      * The attributes that are mass assignable.
@@ -44,8 +44,12 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
+        'birthdate' => 'date',
     ];
 
+    /**
+     * Get the addresses for the user.
+     */
     public function addresses()
     {
         return $this->hasMany(Address::class);
@@ -61,7 +65,7 @@ class User extends Authenticatable
         return $this->hasOne(Cart::class);
     }
 
-    public function wishlists()
+    public function wishlist()
     {
         return $this->hasMany(Wishlist::class);
     }

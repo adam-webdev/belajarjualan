@@ -15,9 +15,8 @@ class Order extends Model
         'order_number',
         'subtotal',
         'shipping_cost',
+        'shipping_method_id',
         'discount_amount',
-        'coupon_id',
-        'coupon_code',
         'total',
         'status',
         'tracking_number',
@@ -42,9 +41,9 @@ class Order extends Model
         return $this->belongsTo(Address::class);
     }
 
-    public function coupon()
+    public function shippingMethod()
     {
-        return $this->belongsTo(Coupon::class);
+        return $this->belongsTo(ShippingMethod::class);
     }
 
     public function details()
@@ -60,11 +59,6 @@ class Order extends Model
     public function reviews()
     {
         return $this->hasMany(ProductReview::class);
-    }
-
-    public function couponUsage()
-    {
-        return $this->hasOne(CouponUsage::class);
     }
 
     // Scopes

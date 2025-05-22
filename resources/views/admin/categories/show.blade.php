@@ -133,10 +133,10 @@
                                             </td>
                                             <td>
                                                 <div class="d-flex gap-1">
-                                                    <a href="#" class="btn btn-sm btn-info">
+                                                    <a href="{{ route('admin.products.show', $product) }}" class="btn btn-sm btn-info" title="View Product">
                                                         <i class="bi bi-eye"></i>
                                                     </a>
-                                                    <a href="#" class="btn btn-sm btn-warning">
+                                                    <a href="{{ route('admin.products.edit', $product) }}" class="btn btn-sm btn-warning" title="Edit Product">
                                                         <i class="bi bi-pencil"></i>
                                                     </a>
                                                 </div>
