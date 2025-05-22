@@ -38,6 +38,11 @@ class Payment extends Model
         return $this->belongsTo(Coupon::class);
     }
 
+    public function paymentMethod()
+    {
+        return $this->belongsTo(PaymentMethod::class, 'payment_method', 'code');
+    }
+
     // Scopes
     public function scopeStatus($query, $status)
     {

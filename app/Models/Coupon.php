@@ -58,10 +58,10 @@ class Coupon extends Model
         return $this->belongsToMany(Product::class, 'coupon_products');
     }
 
-    public function orders()
-    {
-        return $this->hasMany(Order::class);
-    }
+    // public function orders()
+    // {
+    //     return $this->hasMany(Order::class);
+    // }
 
     public function payments()
     {

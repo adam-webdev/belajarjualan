@@ -58,8 +58,6 @@ class OrderController extends Controller
             'shipping_cost.required' => 'Biaya pengiriman harus diisi',
             'shipping_cost.numeric' => 'Biaya pengiriman harus berupa angka',
             'shipping_cost.min' => 'Biaya pengiriman minimal 0',
-            'shipping_method_id.required' => 'Pilih metode pengiriman terlebih dahulu',
-            'shipping_method_id.exists' => 'Metode pengiriman yang dipilih tidak valid',
             'status.required' => 'Status pesanan harus dipilih',
             'status.in' => 'Status pesanan tidak valid'
         ];
@@ -73,13 +71,14 @@ class OrderController extends Controller
             'items.*.is_default' => 'nullable|boolean',
             'items.*.quantity' => 'required|integer|min:1',
             'shipping_cost' => 'required|numeric|min:0',
-            'shipping_method_id' => 'required|exists:shipping_methods,id',
             'notes' => 'nullable|string',
             'status' => 'required|in:pending,processing,shipped,delivered,cancelled',
         ], $messages);
 
         DB::beginTransaction();
         try {
+
+
             // Calculate order values
             $subtotal = 0;
             $items = [];
@@ -113,8 +112,8 @@ class OrderController extends Controller
                         ],
                         [
                             'price' => $product->base_price,
-                            'stock' => $product->stock ?? 10, // Default stock if not specified
-                            'weight' => $product->weight ?? 0 // Default weight if not specified
+                            'stock' => $product->stock ?? 10,
+                            'weight' => $product->weight ?? 0
                         ]
                     );
 
@@ -137,11 +136,24 @@ class OrderController extends Controller
                 'order_number' => 'ORD-' . Str::upper(Str::random(8)),
                 'subtotal' => $subtotal,
                 'shipping_cost' => $validated['shipping_cost'],
-                'shipping_method_id' => $validated['shipping_method_id'],
                 'discount_amount' => 0,
                 'total' => $total,
                 'status' => $validated['status'],
                 'notes' => $validated['notes'],
+            ]);
+
+            // Create payment record
+            $paymentMethod = '';
+            if ($request->payment_type === 'bank_transfer' && $request->bank_name) {
+                $paymentMethod = 'bank_transfer - ' . $request->bank_name;
+            } elseif ($request->payment_type === 'e_wallet' && $request->e_wallet_name) {
+                $paymentMethod = 'e_wallet - ' . $request->e_wallet_name;
+            }
+
+            $order->payment()->create([
+                'payment_method' => $paymentMethod,
+                'amount' => $total,
+                'status' => 'pending'
             ]);
 
             // Create order details
@@ -171,7 +183,6 @@ class OrderController extends Controller
             'details.productCombination.product.images',
             'details.productCombination.combinationValues.optionValue.option',
             'payment',
-            'coupon',
             'shippingMethod'
         ]);
         return view('admin.orders.show', compact('order'));
@@ -180,7 +191,7 @@ class OrderController extends Controller
     public function edit(Order $order)
     {
         $statuses = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
-        $order->load(['user', 'address', 'details.productCombination.product', 'payment', 'coupon']);
+        $order->load(['user', 'address', 'details.productCombination.product', 'payment']);
         return view('admin.orders.edit', compact('order', 'statuses'));
     }
 
@@ -364,17 +375,16 @@ class OrderController extends Controller
 
             // Format full address for display
             $address->full_address = $address->address_detail . ', ' .
-                                   $address->district . ', ' .
-                                   $address->city . ', ' .
-                                   $address->province . ' ' .
-                                   $address->postal_code;
+                $address->district . ', ' .
+                $address->city . ', ' .
+                $address->province . ' ' .
+                $address->postal_code;
 
             return response()->json([
                 'success' => true,
                 'message' => 'Address saved successfully',
                 'address' => $address
             ]);
-
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json([
                 'success' => false,
@@ -405,26 +415,45 @@ class OrderController extends Controller
                 ], 400);
             }
 
-            $product = Product::with(['combinations'])->findOrFail($productId);
+            $product = Product::with(['combinations.optionValues.option'])->findOrFail($productId);
 
-            // If product has no variants, return base price
+            // If product has no variants, return default option
             if (!$product->has_variant) {
+                // Create or get default combination
+                $defaultCombination = ProductCombination::firstOrCreate(
+                    [
+                        'product_id' => $product->id,
+                        'sku' => 'DEFAULT-' . $product->id
+                    ],
+                    [
+                        'price' => $product->base_price,
+                        'stock' => $product->stock ?? 10,
+                        'weight' => $product->weight ?? 0
+                    ]
+                );
+
                 return response()->json([
                     'success' => true,
                     'base_price' => $product->base_price,
-                    'combinations' => []
+                    'combinations' => [[
+                        'id' => $defaultCombination->id,
+                        'sku' => $defaultCombination->sku,
+                        'name' => 'Default Product',
+                        'price' => $defaultCombination->price,
+                        'stock' => $defaultCombination->stock
+                    ]]
                 ]);
             }
 
             // Get combinations with their values
             $combinations = $product->combinations()
-                ->with(['combinationValues.optionValue.option'])
+                ->with(['optionValues.option'])
                 ->get()
                 ->map(function ($combination) {
                     // Build combination name from option values
-                    $optionValues = $combination->combinationValues
-                        ->map(function ($cv) {
-                            return $cv->optionValue->option->name . ': ' . $cv->optionValue->value;
+                    $optionValues = $combination->optionValues
+                        ->map(function ($ov) {
+                            return $ov->option->name . ': ' . $ov->value;
                         })
                         ->join(', ');
 
@@ -441,7 +470,6 @@ class OrderController extends Controller
                 'success' => true,
                 'combinations' => $combinations
             ]);
-
         } catch (\Exception $e) {
             \Log::error('Error getting product combinations: ' . $e->getMessage(), [
                 'product_id' => $request->product_id,
@@ -479,8 +507,8 @@ class OrderController extends Controller
             $cost = ShippingCost::where('shipping_method_id', $methodId)
                 ->where(function ($query) use ($address) {
                     $query->where('city', $address->city)
-                          ->orWhere('province', $address->province)
-                          ->orWhere('district', $address->district);
+                        ->orWhere('province', $address->province)
+                        ->orWhere('district', $address->district);
                 })
                 ->first();
 

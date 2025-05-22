@@ -12,6 +12,7 @@ class ProductOption extends Model
     protected $fillable = [
         'product_id',
         'name',
+        'type',
     ];
 
     // Relationships

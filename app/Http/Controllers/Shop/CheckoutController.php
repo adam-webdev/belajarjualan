@@ -119,27 +119,16 @@ class CheckoutController extends Controller
                 ]
             ];
 
-            // Get payment methods
-            $paymentMethods = [
-                'bank_transfer' => [
-                    'name' => 'Bank Transfer',
-                    'banks' => [
-                        'bca' => 'Bank Central Asia (BCA)',
-                        'mandiri' => 'Bank Mandiri',
-                        'bni' => 'Bank Negara Indonesia (BNI)',
-                        'bri' => 'Bank Rakyat Indonesia (BRI)'
-                    ]
-                ],
-                'e_wallet' => [
-                    'name' => 'E-Wallet',
-                    'providers' => [
-                        'gopay' => 'GoPay',
-                        'ovo' => 'OVO',
-                        'dana' => 'DANA',
-                        'linkaja' => 'LinkAja'
-                    ]
-                ]
-            ];
+            // Get active payment methods
+            $paymentMethods = PaymentMethod::active()->get()->groupBy('type')->map(function($methods) {
+                return $methods->mapWithKeys(function($method) {
+                    return [$method->code => [
+                        'name' => $method->name,
+                        'description' => $method->description,
+                        'config' => $method->config
+                    ]];
+                });
+            })->toArray();
 
             // Calculate totals
             $subtotal = $selectedItems->sum(function($item) {
@@ -295,9 +284,7 @@ class CheckoutController extends Controller
                 'shipping_address_id' => 'required|exists:addresses,id',
                 'shipping_method' => 'required|string',
                 'shipping_cost' => 'required|numeric|min:0',
-                'payment_method' => 'required|string',
-                'bank_name' => 'required_if:payment_method,bank_transfer',
-                'e_wallet_provider' => 'required_if:payment_method,e_wallet',
+                'payment_method' => 'required|exists:payment_methods,code',
                 'notes' => 'nullable|string|max:500'
             ]);
 
@@ -357,47 +344,24 @@ class CheckoutController extends Controller
                 $combination->decreaseStock($item->quantity);
             }
 
-            // Format payment method
-            $paymentMethod = $request->payment_method;
-            if ($request->payment_method === 'bank_transfer') {
-                $paymentMethod .= ' - ' . $request->bank_name;
-            } else if ($request->payment_method === 'e_wallet') {
-                $paymentMethod .= ' - ' . $request->e_wallet_provider;
-            }
+            // Get payment method
+            $paymentMethod = PaymentMethod::where('code', $request->payment_method)->firstOrFail();
 
             // Create payment record
             $payment = Payment::create([
                 'order_id' => $order->id,
-                'payment_method' => $paymentMethod,
+                'payment_method' => $paymentMethod->code,
                 'amount' => $order->total,
                 'status' => 'pending'
             ]);
 
             // Add payment details based on method
-            if ($request->payment_method === 'bank_transfer') {
-                $bankAccountNumbers = [
-                    'Bank Central Asia (BCA)' => '1234567890',
-                    'Bank Mandiri' => '0987654321',
-                    'Bank Negara Indonesia (BNI)' => '1122334455',
-                    'Bank Rakyat Indonesia (BRI)' => '5566778899'
-                ];
-
-                $payment->update([
-                    'payment_proof' => json_encode([
-                        'bank_name' => $request->bank_name,
-                        'account_number' => $bankAccountNumbers[$request->bank_name] ?? '1234567890',
-                        'account_name' => 'THRIFT SHOP'
-                    ])
-                ]);
-            } else if ($request->payment_method === 'e_wallet') {
-                $payment->update([
-                    'payment_proof' => json_encode([
-                        'provider' => $request->e_wallet_provider,
-                        'account_number' => '08998083333',
-                        'account_name' => 'THRIFT SHOP'
-                    ])
-                ]);
-            }
+            $payment->update([
+                'payment_proof' => json_encode([
+                    'account_name' => $paymentMethod->getConfigValue('account_name'),
+                    'account_number' => $paymentMethod->getConfigValue('account_number')
+                ])
+            ]);
 
             // Clear selected cart items
             CartItem::whereIn('id', $selectedItemIds)->delete();

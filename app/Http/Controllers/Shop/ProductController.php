@@ -118,6 +118,7 @@ class ProductController extends Controller
         foreach ($product->options as $option) {
             $productOptions[$option->id] = [
                 'name' => $option->name,
+                'type' => $option->type,
                 'values' => $option->values->pluck('value', 'id')->toArray()
             ];
         }

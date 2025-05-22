@@ -95,14 +95,15 @@
                     <input type="hidden" name="combination_id" id="selected_combination_id" value="{{ $defaultCombination->id ?? 0 }}">
                     <div class="product-variants mb-4">
                         @foreach($productOptions as $optionId => $option)
-                        <div class="variant-group mb-3" data-option-id="{{ $optionId }}">
+                        <div class="variant-group mb-3" data-option-id="{{ $optionId }}" data-option-type="{{ $option['type'] }}">
                             <label class="fw-bold mb-2">{{ $option['name'] }}:</label>
                             <div class="d-flex flex-wrap">
                                 @foreach($option['values'] as $valueId => $value)
-                                <div class="variant-item {{ $option['name'] == 'Color' ? 'color-variant' : 'size-variant' }} me-2 mb-2"
+                                <div class="variant-item {{ $option['type'] == 'color' ? 'color-variant' : 'size-variant' }} me-2 mb-2"
                                      data-option-id="{{ $optionId }}"
                                      data-value-id="{{ $valueId }}"
                                      data-value="{{ $value }}"
+                                     data-option-type="{{ $option['type'] }}"
                                      style="
                                         width: 40px;
                                         height: 40px;
@@ -113,12 +114,12 @@
                                         border-radius: 8px;
                                         cursor: pointer;
                                         transition: all 0.3s ease;
-                                        {{ $option['name'] == 'Color' ? 'background-color: ' . strtolower($value) . ';' : '' }}
+                                        {{ $option['type'] == 'color' ? 'background-color: ' . strtolower($value) . ';' : '' }}
                                      "
-                                     @if($option['name'] == 'Color')
+                                     @if($option['type'] == 'color')
                                      title="{{ $value }}"
                                      @endif>
-                                    @if($option['name'] != 'Color')
+                                    @if($option['type'] != 'color')
                                         {{ $value }}
                                     @endif
                                 </div>
@@ -297,6 +298,7 @@
             const optionId = this.getAttribute('data-option-id');
             const valueId = this.getAttribute('data-value-id');
             const value = this.getAttribute('data-value');
+            const optionType = this.getAttribute('data-option-type');
 
             // Remove active class from same option items
             document.querySelectorAll(`.variant-item[data-option-id="${optionId}"]`).forEach(el => {
@@ -311,7 +313,8 @@
             // Update selected options
             selectedOptionValues[optionId] = {
                 id: valueId,
-                value: value
+                value: value,
+                type: optionType
             };
 
             // Check if all options are selected

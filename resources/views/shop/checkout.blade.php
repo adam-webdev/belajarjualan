@@ -66,42 +66,25 @@
 $(document).ready(function() {
     // Handle payment method change
     $('select[name="payment_method"]').on('change', function() {
-        const method = $(this).val();
-        $('#bankTransferOptions, #eWalletOptions').hide();
-        $('#bankAccountInfo, #eWalletAccountInfo').hide();
-
-        if (method === 'bank_transfer') {
-            $('#bankTransferOptions').show();
-        } else if (method === 'e_wallet') {
-            $('#eWalletOptions').show();
-        }
-    });
-
-    // Handle bank selection
-    $('#bankSelect').on('change', function() {
         const selectedOption = $(this).find('option:selected');
-        const accountName = selectedOption.data('account-name');
-        const accountNumber = selectedOption.data('account-number');
+        const type = selectedOption.data('type');
+        const code = $(this).val();
 
-        if (accountName && accountNumber) {
-            $('#accountName').text(accountName);
-            $('#accountNumber').text(accountNumber);
-            $('#bankAccountInfo').show();
-        } else {
-            $('#bankAccountInfo').hide();
+        if (!code) {
+            $('#paymentDetails').hide();
+            return;
         }
-    });
 
-    // Handle e-wallet selection
-    $('#eWalletSelect').on('change', function() {
-        const selectedOption = $(this).find('option:selected');
-        const accountNumber = selectedOption.data('account-number');
+        // Get payment method details from the data
+        const method = @json($paymentMethods);
+        const methodDetails = method[type][code];
 
-        if (accountNumber) {
-            $('#eWalletNumber').text(accountNumber);
-            $('#eWalletAccountInfo').show();
+        if (methodDetails) {
+            $('#accountName').text(methodDetails.config.account_name);
+            $('#accountNumber').text(methodDetails.config.account_number);
+            $('#paymentDetails').show();
         } else {
-            $('#eWalletAccountInfo').hide();
+            $('#paymentDetails').hide();
         }
     });
 
@@ -281,50 +264,24 @@ $(document).ready(function() {
                             <label class="form-label">Select Payment Method</label>
                             <select class="form-select" name="payment_method" required>
                                 <option value="">Choose payment method...</option>
-                                @foreach($paymentMethods as $code => $method)
-                                    <option value="{{ $code }}">{{ $method['name'] }}</option>
+                                @foreach($paymentMethods as $type => $methods)
+                                    <optgroup label="{{ ucfirst(str_replace('_', ' ', $type)) }}">
+                                        @foreach($methods as $code => $method)
+                                            <option value="{{ $code }}" data-type="{{ $type }}">
+                                                {{ $method['name'] }}
+                                            </option>
+                                        @endforeach
+                                    </optgroup>
                                 @endforeach
                             </select>
                         </div>
 
-                        <!-- Bank Transfer Options -->
-                        <div id="bankTransferOptions" class="mb-3" style="display: none;">
-                            <label class="form-label">Select Bank</label>
-                            <select class="form-select" name="bank_name" id="bankSelect">
-                                <option value="">Choose bank...</option>
-                                @foreach($paymentMethods['bank_transfer']['banks'] as $code => $name)
-                                    <option value="{{ $name }}" data-account-name="TrifShop" data-account-number="{{ $code === 'bca' ? '1234567890' : ($code === 'mandiri' ? '0987654321' : ($code === 'bni' ? '1122334455' : '5566778899')) }}">
-                                        {{ $name }}
-                                    </option>
-                                @endforeach
-                            </select>
-
-                            <div id="bankAccountInfo" class="mt-3" style="display: none;">
-                                <div class="alert alert-info">
-                                    <h6 class="alert-heading">Bank Account Information</h6>
-                                    <p class="mb-1">Account Name: <strong id="accountName"></strong></p>
-                                    <p class="mb-0">Account Number: <strong id="accountNumber"></strong></p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- E-Wallet Options -->
-                        <div id="eWalletOptions" class="mb-3" style="display: none;">
-                            <label class="form-label">Select E-Wallet</label>
-                            <select class="form-select" name="e_wallet_provider" id="eWalletSelect">
-                                <option value="">Choose e-wallet...</option>
-                                @foreach($paymentMethods['e_wallet']['providers'] as $code => $name)
-                                    <option value="{{ $name }}" data-account-number="08998083333">
-                                        {{ $name }}
-                                    </option>
-                                @endforeach
-                            </select>
-
-                            <div id="eWalletAccountInfo" class="mt-3" style="display: none;">
-                                <div class="alert alert-info">
-                                    <h6 class="alert-heading">E-Wallet Account Information</h6>
-                                    <p class="mb-0">Account Number: <strong id="eWalletNumber"></strong></p>
-                                </div>
+                        <!-- Payment Details -->
+                        <div id="paymentDetails" class="mt-3" style="display: none;">
+                            <div class="alert alert-info">
+                                <h6 class="alert-heading">Payment Information</h6>
+                                <p class="mb-1">Account Name: <strong id="accountName"></strong></p>
+                                <p class="mb-0">Account Number: <strong id="accountNumber"></strong></p>
                             </div>
                         </div>
                     </div>

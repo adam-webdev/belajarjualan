@@ -178,6 +178,15 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
     Route::put('payments/{payment}/status', [App\Http\Controllers\Admin\PaymentController::class, 'updateStatus'])->name('payments.update-status');
     Route::post('payments/check-expired', [App\Http\Controllers\Admin\PaymentController::class, 'checkExpiredPayments'])->name('payments.check-expired');
     Route::delete('/payments/{payment}/delete-failed', [PaymentController::class, 'deleteFailedPayment'])->name('payments.delete-failed');
+
+    // Payment Methods
+    Route::get('payments/methods', [App\Http\Controllers\Admin\PaymentMethodController::class, 'index'])->name('payments.methods.index');
+    Route::get('payments/methods/create', [App\Http\Controllers\Admin\PaymentMethodController::class, 'create'])->name('payments.methods.create');
+    Route::post('payments/methods', [App\Http\Controllers\Admin\PaymentMethodController::class, 'store'])->name('payments.methods.store');
+    Route::get('payments/methods/{method}/edit', [App\Http\Controllers\Admin\PaymentMethodController::class, 'edit'])->name('payments.methods.edit');
+    Route::put('payments/methods/{method}', [App\Http\Controllers\Admin\PaymentMethodController::class, 'update'])->name('payments.methods.update');
+    Route::delete('payments/methods/{method}', [App\Http\Controllers\Admin\PaymentMethodController::class, 'destroy'])->name('payments.methods.destroy');
+    Route::put('payments/methods/{method}/toggle-status', [App\Http\Controllers\Admin\PaymentMethodController::class, 'toggleStatus'])->name('payments.methods.toggle-status');
 });
 
 // Shop Routes
