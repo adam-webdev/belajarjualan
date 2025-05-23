@@ -202,7 +202,7 @@
                                 <div class="col-md-6">
                                     <div class="form-group">
                                         <label class="form-label">Quantity</label>
-                                        <input type="number" class="form-control item-quantity" name="items[0][quantity]" min="1" value="1" required>
+                                        <input type="number" class="form-control item-quantity" name="items[0][quantity]"  value="1" required>
                                     </div>
                                 </div>
 

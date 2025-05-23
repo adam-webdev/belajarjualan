@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\OrderDetail;
 use App\Models\Product;
+use App\Models\Payment;
 use App\Models\User;
 use App\Models\Address;
 use App\Models\ProductCombination;
@@ -23,6 +24,55 @@ class OrderController extends Controller
     {
         $orders = Order::with(['user', 'payment'])->latest()->get();
         return view('admin.orders.index', compact('orders'));
+    }
+
+    /**
+     * Get dashboard data with proper payment status handling
+     */
+    public function getDashboardData()
+    {
+        // Get orders with eager loading
+        $orders = Order::with(['user', 'payment'])
+            ->latest()
+            ->take(5)
+            ->get()
+            ->map(function ($order) {
+                // Ensure payment status is always available
+                $paymentStatus = $order->payment ? $order->payment->status : 'pending';
+                return [
+                    'order_number' => $order->order_number,
+                    'customer_name' => $order->user->name,
+                    'total' => $order->total,
+                    'status' => $order->status,
+                    'payment_status' => $paymentStatus
+                ];
+            });
+
+        // Get payment statistics
+        $totalOrders = Order::count();
+        $paidOrders = Order::whereHas('payment', function($q) {
+            $q->where('status', 'paid');
+        })->count();
+        $pendingOrders = Order::whereHas('payment', function($q) {
+            $q->where('status', 'pending');
+        })->count();
+
+        // Get order status counts
+        $pendingCount = Order::where('status', 'pending')->count();
+        $processingCount = Order::where('status', 'processing')->count();
+        $deliveredCount = Order::where('status', 'delivered')->count();
+
+        return [
+            'recent_orders' => $orders,
+            'total_orders' => $totalOrders,
+            'paid_orders' => $paidOrders,
+            'pending_orders' => $pendingOrders,
+            'order_status' => [
+                'pending' => $pendingCount,
+                'processing' => $processingCount,
+                'delivered' => $deliveredCount
+            ]
+        ];
     }
 
     public function create()
@@ -143,18 +193,48 @@ class OrderController extends Controller
             ]);
 
             // Create payment record
-            $paymentMethod = '';
+            $paymentMethod = 'pending';
             if ($request->payment_type === 'bank_transfer' && $request->bank_name) {
                 $paymentMethod = 'bank_transfer - ' . $request->bank_name;
             } elseif ($request->payment_type === 'e_wallet' && $request->e_wallet_name) {
                 $paymentMethod = 'e_wallet - ' . $request->e_wallet_name;
             }
 
-            $order->payment()->create([
+
+               // Create payment record
+            $payment = payment::create([
+                'order_id' => $order->id,
                 'payment_method' => $paymentMethod,
-                'amount' => $total,
+                'amount' => $order->total,
                 'status' => 'pending'
             ]);
+
+
+             // Add payment details based on method
+            if ($request->payment_type === 'bank_transfer') {
+                $bankAccountNumbers = [
+                    'Bank Central Asia (BCA)' => '1234567890',
+                    'Bank Mandiri' => '0987654321',
+                    'Bank Negara Indonesia (BNI)' => '1122334455',
+                    'Bank Rakyat Indonesia (BRI)' => '5566778899'
+                ];
+
+                $payment->update([
+                    'payment_proof' => json_encode([
+                        'bank_name' => $request->bank_name,
+                        'account_number' => $bankAccountNumbers[$request->bank_name] ?? '1234567890',
+                        'account_name' => 'THRIFT SHOP'
+                    ])
+                ]);
+            } else if ($request->payment_type === 'e_wallet') {
+                $payment->update([
+                    'payment_proof' => json_encode([
+                        'e_wallet_name' => $request->e_wallet_name,
+                        'account_number' => '08998083333',
+                        'account_name' => 'THRIFT SHOP'
+                    ])
+                ]);
+            }
 
             // Create order details
             foreach ($items as $item) {

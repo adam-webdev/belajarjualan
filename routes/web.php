@@ -33,13 +33,7 @@ Route::post('/custom-logout', function() {
 
 // Dashboard Route (Protected, admin only)
 Route::middleware(['auth'])->group(function () {
-    Route::get('/dashboard', function () {
-        // Check if user is admin
-        if (Auth::user()->role !== 'admin') {
-            return redirect('/'); // Redirect non-admin users to homepage
-        }
-        return view('layouts.layoutmaster');
-    })->name('dashboard');
+    Route::get('/dashboard', [App\Http\Controllers\Admin\DashboardController::class, 'index'])->name('dashboard');
 });
 
 // Admin Routes
@@ -195,7 +189,7 @@ Route::prefix('shop')->name('shop.')->group(function () {
     Route::get('/cart', [CartController::class, 'index'])->name('cart');
     Route::post('/cart/update', [CartController::class, 'update'])->name('cart.update');
     Route::post('/cart/remove', [CartController::class, 'remove'])->name('cart.remove');
-    Route::post('/cart/checkout', [CartController::class, 'proceedToCheckout'])->name('cart.proceed-to-checkout');
+    Route::post('/cart/proceed-to-checkout', [CartController::class, 'proceedToCheckout'])->name('cart.proceed-to-checkout');
 
     // Checkout Routes
     Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout');

@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Validator;
 use App\Models\ShippingMethod;
 use Illuminate\Support\Facades\DB;
 use App\Models\Order;
+use App\Models\Address;
 
 class CartController extends Controller
 {
@@ -660,6 +661,13 @@ class CartController extends Controller
                     ->with('error', 'Your cart is empty');
             }
 
+            // Check if user has a shipping address
+            $hasAddress = Address::where('user_id', auth()->id())->exists();
+            if (!$hasAddress) {
+                return redirect()->back()
+                    ->with('error', 'Please add a shipping address before proceeding to checkout');
+            }
+
             // Check stock availability for all items
             foreach ($cart->items as $item) {
                 if (in_array($item->id, $selectedItems)) {
@@ -676,7 +684,8 @@ class CartController extends Controller
             session(['checkout_items' => $selectedItems]);
 
             // Redirect to checkout page
-            return redirect()->route('shop.checkout');
+            return redirect()->route('shop.checkout')
+                ->with('success', 'Proceeding to checkout...');
 
         } catch (\Exception $e) {
             \Log::error('Checkout error: ' . $e->getMessage());
