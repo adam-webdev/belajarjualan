@@ -30,6 +30,25 @@ class Order extends Model
         'total' => 'decimal:2',
     ];
 
+    public function data_transaksi()
+    {
+        $orders = Order::with('details.productCombination.product')->get();
+        $transactions = [];
+        foreach ($orders as $order) {
+            $itemsInTransaction = [];
+            foreach ($order->details as $detail) {
+                // Pastikan relasi productCombination dan product ada sebelum mengaksesnya
+                if ($detail->productCombination && $detail->productCombination->product) {
+                    $itemsInTransaction[] = $detail->productCombination->product->name;
+                }
+            }
+            // Hanya tambahkan transaksi jika ada item di dalamnya
+            if (!empty($itemsInTransaction)) {
+                $transactions[] = $itemsInTransaction;
+            }
+        }
+        return $transactions;
+    }
     // Relationships
     public function user()
     {

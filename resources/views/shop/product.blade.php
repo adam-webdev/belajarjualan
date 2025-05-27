@@ -4,7 +4,6 @@
 
 @section('content')
 <div class="container my-4">
-    <!-- Breadcrumb -->
     <nav aria-label="breadcrumb" class="mb-4">
         <ol class="breadcrumb">
             <li class="breadcrumb-item"><a href="{{ url('/') }}">Home</a></li>
@@ -13,12 +12,9 @@
         </ol>
     </nav>
 
-    <!-- Product Detail -->
     <div class="row">
-        <!-- Product Images -->
         <div class="col-md-5 mb-4">
             <div class="product-images">
-                <!-- Main Image -->
                 <div class="main-image mb-3" style="width: 100%; height: 400px; overflow: hidden; border-radius: 8px;">
                     @if($product->images->count() > 0)
                         <img src="{{ asset('storage/' . $product->images->first()->image_path) }}"
@@ -35,7 +31,6 @@
                     @endif
                 </div>
 
-                <!-- Thumbnail Images Carousel -->
                 @if($product->images->count() > 1)
                 <div class="thumbnail-carousel position-relative">
                     <div class="thumbnail-images d-flex overflow-hidden" style="max-width: 100%;">
@@ -61,12 +56,10 @@
             </div>
         </div>
 
-        <!-- Product Info -->
         <div class="col-md-7">
             <div class="product-info bg-white p-4 rounded">
                 <h1 class="h3 mb-2">{{ $product->name }}</h1>
 
-                <!-- Price -->
                 <div class="product-price mb-3" id="product-price-display">
                     @if($flashSaleItem)
                         <span class="fw-bold fs-4">Rp {{ number_format($flashSaleItem->sale_price ?? 0, 0, ',', '.') }}</span>
@@ -81,7 +74,6 @@
                     @endif
                 </div>
 
-                <!-- Short Description -->
                 <div class="product-description mb-4">
                     <p>{{ $product->short_description }}</p>
                 </div>
@@ -90,7 +82,6 @@
                     @csrf
                     <input type="hidden" name="product_id" value="{{ $product->id }}">
 
-                    <!-- Product Variants -->
                     @if($product->has_variant && count($productOptions) > 0)
                     <input type="hidden" name="combination_id" id="selected_combination_id" value="{{ $defaultCombination->id ?? 0 }}">
                     <div class="product-variants mb-4">
@@ -129,11 +120,9 @@
                         @endforeach
                     </div>
                     @else
-                    <!-- Product without variants -->
                     <input type="hidden" name="combination_id" id="selected_combination_id" value="{{ $defaultCombination->id ?? 0 }}">
                     @endif
 
-                    <!-- Stock Info -->
                     <div class="stock-info mb-3">
                         <div class="alert alert-info" id="stock-alert" style="display: none;">
                             <i class="bi bi-info-circle me-2"></i>
@@ -141,7 +130,6 @@
                         </div>
                     </div>
 
-                    <!-- Quantity -->
                     <div class="quantity-container mb-4">
                         <label class="fw-bold mb-2">Quantity:</label>
                         <div class="d-flex align-items-center">
@@ -152,7 +140,6 @@
                         </div>
                     </div>
 
-                    <!-- Add to Cart -->
                     <div class="d-flex mb-4">
                         <button type="button" id="add-to-cart-button" class="btn btn-primary me-2 flex-grow-1">
                             <i class="bi bi-cart-plus me-2"></i> Add to Cart
@@ -160,7 +147,6 @@
                     </div>
                 </form>
 
-                <!-- Purchase Protection -->
                 <div class="purchase-protection p-3 bg-light rounded mb-4">
                     <div class="d-flex">
                         <i class="bi bi-shield-check text-primary me-2 fs-4"></i>
@@ -171,7 +157,6 @@
                     </div>
                 </div>
 
-                <!-- Product Details -->
                 <div class="product-details">
                     <h5>Product Details</h5>
                     <ul class="list-unstyled">
@@ -187,7 +172,6 @@
         </div>
     </div>
 
-    <!-- Product Tabs -->
     <div class="row mt-5">
         <div class="col-12">
             <ul class="nav nav-tabs" id="productTabs" role="tablist">
@@ -228,24 +212,81 @@
         </div>
     </div>
 
-    <!-- Related Products -->
+    <div class="apriori-recommendations mt-5">
+        <h3 class="mb-4">Produk yang Sering Dibeli Bersama</h3>
+        @if($recommendedProducts->isNotEmpty())
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-4">
+            @foreach($recommendedProducts as $recProduct)
+            <div class="col">
+                <div class="card h-100 product-card">
+                    <div class="position-relative">
+                        <a href="{{ route('shop.product', $recProduct->slug) }}">
+                            @if($recProduct->images->count() > 0)
+                                <img src="{{ asset('storage/' . $recProduct->images->first()->image_path) }}" class="card-img-top product-img" alt="{{ $recProduct->name }}" style="height: 200px; object-fit: contain;">
+                            @else
+                                <img src="https://via.placeholder.com/300x300?text={{ $recProduct->name }}" class="card-img-top product-img" alt="{{ $recProduct->name }}" style="height: 200px; object-fit: contain;">
+                            @endif
+                        </a>
+                        {{-- Jika ada diskon, Anda bisa tambahkan badge di sini --}}
+                        @if(isset($recProduct->sale_price) && $recProduct->sale_price < $recProduct->base_price)
+                            <span class="badge bg-danger position-absolute top-0 start-0 m-2">-{{ round(((($recProduct->base_price ?? 0) - ($recProduct->sale_price ?? 0)) / ($recProduct->base_price ?? 1)) * 100) }}%</span>
+                        @endif
+                        {{-- Wishlist button (optional, uncomment if needed) --}}
+                        {{-- <form method="POST" action="{{ route('shop.wishlist.add') }}" class="d-inline wishlist-form">
+                            @csrf
+                            <input type="hidden" name="product_id" value="{{ $recProduct->id }}">
+                            <button type="button" class="btn btn-sm position-absolute top-0 end-0 m-2 bg-white rounded-circle p-2 wishlist-btn">
+                                <i class="bi bi-heart"></i>
+                            </button>
+                        </form> --}}
+                    </div>
+                    <div class="card-body d-flex flex-column">
+                        <a href="{{ route('shop.product', $recProduct->slug) }}" class="text-decoration-none text-dark">
+                            <h5 class="card-title product-title fs-6">{{ $recProduct->name }}</h5>
+                        </a>
+                        <div class="mt-auto">
+                            @if(isset($recProduct->sale_price) && $recProduct->sale_price < $recProduct->base_price)
+                            <div>
+                                <p class="product-price fw-bold mb-0">Rp {{ number_format($recProduct->sale_price, 0, ',', '.') }}</p>
+                                <small class="text-decoration-line-through text-muted">Rp {{ number_format($recProduct->base_price, 0, ',', '.') }}</small>
+                            </div>
+                            @else
+                            <p class="product-price fw-bold mb-0">Rp {{ number_format($recProduct->base_price ?? 0, 0, ',', '.') }}</p>
+                            @endif
+                            {{-- Add to cart button (optional, uncomment if needed) --}}
+                            {{-- <form method="POST" action="{{ route('shop.cart.add') }}" class="d-inline cart-form">
+                                @csrf
+                                <input type="hidden" name="product_id" value="{{ $recProduct->id }}">
+                                <input type="hidden" name="quantity" value="1">
+                                <button type="button" class="btn btn-sm btn-primary add-to-cart-btn"><i class="bi bi-cart-plus"></i></button>
+                            </form> --}}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            @endforeach
+        </div>
+        @else
+        <p>Tidak ada rekomendasi produk yang relevan saat ini.</p>
+        @endif
+    </div>
     @if($relatedProducts->count() > 0)
     <div class="related-products mt-5">
-        <h3 class="mb-4">Related Products</h3>
-        <div class="row">
+        <h3 class="mb-4">Produk Serupa Lainnya</h3>
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-4">
             @foreach($relatedProducts as $relatedProduct)
-            <div class="col-6 col-md-3 mb-4">
-                <div class="product-card">
+            <div class="col">
+                <div class="card h-100 product-card">
                     <div class="position-relative">
                         <a href="{{ route('shop.product', $relatedProduct->slug) }}">
                             @if($relatedProduct->images->count() > 0)
-                                <img src="{{ asset('storage/' . $relatedProduct->images->first()->path) }}" class="card-img-top product-img" alt="{{ $relatedProduct->name }}">
+                                <img src="{{ asset('storage/' . $relatedProduct->images->first()->image_path) }}" class="card-img-top product-img" alt="{{ $relatedProduct->name }}" style="height: 200px; object-fit: contain;">
                             @else
-                                <img src="https://via.placeholder.com/300x300?text={{ $relatedProduct->name }}" class="card-img-top product-img" alt="{{ $relatedProduct->name }}">
+                                <img src="https://via.placeholder.com/300x300?text={{ $relatedProduct->name }}" class="card-img-top product-img" alt="{{ $relatedProduct->name }}" style="height: 200px; object-fit: contain;">
                             @endif
                         </a>
                         @if($relatedProduct->sale_price && $relatedProduct->sale_price < $relatedProduct->base_price)
-                            <span class="discount-badge">-{{ round((($relatedProduct->base_price - $relatedProduct->sale_price) / $relatedProduct->base_price) * 100) }}%</span>
+                            <span class="badge bg-danger position-absolute top-0 start-0 m-2">-{{ round(((($relatedProduct->base_price ?? 0) - ($relatedProduct->sale_price ?? 0)) / ($relatedProduct->base_price ?? 1)) * 100) }}%</span>
                         @endif
                         <form method="POST" action="{{ route('shop.wishlist.add') }}" class="d-inline wishlist-form">
                             @csrf
@@ -255,18 +296,18 @@
                             </button>
                         </form>
                     </div>
-                    <div class="card-body">
+                    <div class="card-body d-flex flex-column">
                         <a href="{{ route('shop.product', $relatedProduct->slug) }}" class="text-decoration-none text-dark">
-                            <h5 class="product-title">{{ $relatedProduct->name }}</h5>
+                            <h5 class="card-title product-title fs-6">{{ $relatedProduct->name }}</h5>
                         </a>
-                        <div class="d-flex justify-content-between align-items-center">
+                        <div class="mt-auto">
                             @if($relatedProduct->sale_price && $relatedProduct->sale_price < $relatedProduct->base_price)
                             <div>
-                                <p class="product-price mb-0">Rp {{ number_format($relatedProduct->sale_price, 0, ',', '.') }}</p>
+                                <p class="product-price fw-bold mb-0">Rp {{ number_format($relatedProduct->sale_price, 0, ',', '.') }}</p>
                                 <small class="text-decoration-line-through text-muted">Rp {{ number_format($relatedProduct->base_price, 0, ',', '.') }}</small>
                             </div>
                             @else
-                            <p class="product-price mb-0">Rp {{ number_format($relatedProduct->base_price, 0, ',', '.') }}</p>
+                            <p class="product-price fw-bold mb-0">Rp {{ number_format($relatedProduct->base_price ?? 0, 0, ',', '.') }}</p>
                             @endif
                             <form method="POST" action="{{ route('shop.cart.add') }}" class="d-inline cart-form">
                                 @csrf
@@ -596,6 +637,94 @@
 
     .stock-info .alert {
         margin-bottom: 0;
+    }
+
+    /* Styles for Apriori Recommendations and Related Products */
+    .product-card {
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        overflow: hidden;
+        transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+
+    .product-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    .product-card .product-img {
+        width: 100%;
+        height: 200px; /* Consistent height for product images */
+        object-fit: contain; /* Ensures entire image is visible */
+        padding: 10px; /* Add some padding around the image */
+    }
+
+    .product-card .card-body {
+        padding: 15px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+
+    .product-card .product-title {
+        font-size: 1rem; /* Adjust font size as needed */
+        font-weight: 600;
+        line-height: 1.3;
+        height: 3em; /* Limit height to 2 lines approx */
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        margin-bottom: 0.5rem;
+    }
+
+    .product-card .product-price {
+        font-size: 1.1rem;
+        font-weight: bold;
+        color: #007bff;
+    }
+
+    .product-card .discount-badge {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        background-color: #dc3545;
+        color: white;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.85em;
+        font-weight: bold;
+    }
+
+    .product-card .wishlist-btn,
+    .product-card .add-to-cart-btn {
+        border: none;
+        background-color: white; /* Or transparent, depends on design */
+        color: #6c757d;
+        border-radius: 50%;
+        width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease-in-out;
+    }
+
+    .product-card .wishlist-btn:hover,
+    .product-card .add-to-cart-btn:hover {
+        background-color: #e9ecef;
+        color: #007bff;
+    }
+
+    .product-card .add-to-cart-btn {
+        background-color: #007bff;
+        color: white;
+        border-radius: 5px; /* Adjust as needed */
+    }
+    .product-card .add-to-cart-btn:hover {
+        background-color: #0056b3;
     }
 </style>
 @endsection

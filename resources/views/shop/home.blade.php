@@ -275,7 +275,6 @@
 @endsection
 
 @section('content')
-<!-- Hero Slider -->
 <section class="hero-slider mb-5">
     <div id="heroCarousel" class="carousel slide" data-bs-ride="carousel">
         <div class="carousel-indicators">
@@ -318,12 +317,11 @@
     </div>
 </section>
 
-<!-- Featured Categories -->
 <section class="featured-categories mb-5">
     <div class="container">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h2 class="section-title">Featured Categories</h2>
-            <a href="{{ url('/categories') }}" class="btn btn-outline-primary btn-sm">View All</a>
+            <!-- <a href="{{ url('/categories') }}" class="btn btn-outline-primary btn-sm">View All</a> -->
         </div>
 
         <div id="categoryCarousel" class="carousel slide category-carousel" data-bs-ride="carousel">
@@ -368,12 +366,72 @@
     </div>
 </section>
 
-<!-- Featured Products -->
+
+<!-- Apriori Rekomendasi -->
+
+<section class="apriori-homepage-recommendations mb-5">
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="section-title">Produk Rekomendasi Khusus untuk Anda <span class="badge bg-success ms-2" style="font-size: 0.9em; vertical-align: middle;">by Apriori</span></h2>
+        </div>
+        @if($aprioriHomepageRecommendations->isNotEmpty())
+        <div class="row"> {{-- Menggunakan `row` tanpa `row-cols-*` agar Bootstrap yang atur --}}
+            @foreach($aprioriHomepageRecommendations as $recProduct)
+            <div class="col-6 col-md-4 col-lg-3 mb-4"> {{-- Sesuaikan grid columns sesuai kebutuhan --}}
+                <div class="product-card">
+                    <div class="position-relative">
+                        <a href="{{ route('shop.product', $recProduct->slug) }}">
+                            @if($recProduct->images->count() > 0)
+                                <img src="{{ asset('storage/' . $recProduct->images->first()->image_path) }}" class="card-img-top product-img" alt="{{ $recProduct->name }}">
+                            @else
+                                <img src="https://via.placeholder.com/300x300?text={{ $recProduct->name }}" class="card-img-top product-img" alt="{{ $recProduct->name }}">
+                            @endif
+                        </a>
+                        @if(isset($recProduct->sale_price) && $recProduct->sale_price < $recProduct->base_price)
+                            <span class="discount-badge">-{{ round(((($recProduct->base_price ?? 0) - ($recProduct->sale_price ?? 0)) / ($recProduct->base_price ?? 1)) * 100) }}%</span>
+                        @endif
+
+                    </div>
+                    <div class="card-body">
+                        <h5 class="product-title">
+                            <a href="{{ route('shop.product', $recProduct->slug) }}" class="text-decoration-none text-dark">
+                                {{ $recProduct->name }}
+                            </a>
+                        </h5>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                @if(isset($recProduct->sale_price) && $recProduct->sale_price < $recProduct->base_price)
+                                    <p class="product-price mb-0">Rp {{ number_format($recProduct->sale_price, 0, ',', '.') }}</p>
+                                    <small class="text-decoration-line-through text-muted">Rp {{ number_format($recProduct->base_price, 0, ',', '.') }}</small>
+                                @else
+                                    <p class="product-price mb-0">Rp {{ number_format($recProduct->base_price ?? 0, 0, ',', '.') }}</p>
+                                @endif
+                            </div>
+                            {{-- Optional: Add to cart button --}}
+                            <button class="btn btn-sm btn-primary add-to-cart"
+                                    data-product-id="{{ $recProduct->id }}"
+                                    data-combination-id="{{ $recProduct->combinations->first()->id ?? 0 }}">
+                                <i class="bi bi-cart-plus"></i>
+                            </button>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+            @endforeach
+        </div>
+        @else
+        <p>Tidak ada rekomendasi Apriori yang tersedia saat ini.</p>
+        @endif
+    </div>
+</section>
+<!-- end rekomendasi -->
+
 <section class="featured-products mb-5">
     <div class="container">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h2 class="section-title">Featured Products</h2>
-            <a href="{{ url('/products') }}" class="btn btn-outline-primary btn-sm">View All</a>
+            <!-- <a href="{{ url('/products') }}" class="btn btn-outline-primary btn-sm">View All</a> -->
         </div>
         <div class="row">
             @foreach($featuredProducts as $product)
@@ -431,12 +489,11 @@
     </div>
 </section>
 
-<!-- Best Selling Products -->
 <section class="best-selling-products mb-5">
     <div class="container">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h2 class="section-title">Best Selling Products</h2>
-            <a href="{{ url('/best-sellers') }}" class="btn btn-outline-primary btn-sm">View All</a>
+            <!-- <a href="{{ url('/best-sellers') }}" class="btn btn-outline-primary btn-sm">View All</a> -->
         </div>
         <div class="row">
             @foreach($bestSellingProducts as $product)
@@ -494,45 +551,8 @@
     </div>
 </section>
 
-<!-- Promotions -->
-<section class="promotion-banners mb-5">
-    <div class="container">
-        <div class="row">
-            <div class="col-md-6 mb-4">
-                <div class="card bg-light overflow-hidden">
-                    <div class="row g-0">
-                        <div class="col-5">
-                            <img src="https://via.placeholder.com/300x200/42b549/ffffff?text=New+Arrivals" class="w-100 h-100 object-fit-cover" alt="New Arrivals">
-                        </div>
-                        <div class="col-7">
-                            <div class="card-body">
-                                <h5 class="card-title">New Arrivals</h5>
-                                <p class="card-text">Check out our latest products for this season.</p>
-                                <a href="{{ url('/new-arrivals') }}" class="btn btn-outline-primary btn-sm">Shop Now</a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6 mb-4">
-                <div class="card bg-light overflow-hidden">
-                    <div class="row g-0">
-                        <div class="col-5">
-                            <img src="https://via.placeholder.com/300x200/ff4d00/ffffff?text=Best+Sellers" class="w-100 h-100 object-fit-cover" alt="Best Sellers">
-                        </div>
-                        <div class="col-7">
-                            <div class="card-body">
-                                <h5 class="card-title">Best Sellers</h5>
-                                <p class="card-text">Our most popular products that customers love.</p>
-                                <a href="{{ url('/best-sellers') }}" class="btn btn-outline-primary btn-sm">Shop Now</a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
+
+
 @endsection
 
 @section('js')

@@ -18,15 +18,16 @@ use App\Http\Controllers\Shop\ProfileController;
 use App\Http\Controllers\Shop\CheckoutController;
 use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\PaymentController;
+use App\Http\Controllers\MarketAnalysisController;
 
 // Include shop routes for all nested paths
-require __DIR__.'/shop.php';
+require __DIR__ . '/shop.php';
 
 // Authentication Routes
 Auth::routes();
 
 // Custom logout route to fix redirection issue
-Route::post('/custom-logout', function() {
+Route::post('/custom-logout', function () {
     Auth::logout();
     return redirect('/');
 })->name('custom.logout');
@@ -39,6 +40,9 @@ Route::middleware(['auth'])->group(function () {
 // Admin Routes
 Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () {
     // Users
+
+    Route::get('/analyze', [MarketAnalysisController::class, 'aprioriAnalysis']);
+
     Route::get('users', [AdminUserController::class, 'index'])->name('users.index');
     Route::get('users/create', [AdminUserController::class, 'create'])->name('users.create');
     Route::post('users', [AdminUserController::class, 'store'])->name('users.store');

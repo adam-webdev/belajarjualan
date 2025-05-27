@@ -3,15 +3,220 @@
 namespace App\Http\Controllers\Shop;
 
 use App\Http\Controllers\Controller;
+use App\Models\AssociationRule;
 use Illuminate\Http\Request;
 use App\Models\Product;
 use App\Models\Category;
 use App\Models\FlashSale;
+use App\Models\Order;
 use App\Models\ProductOption;
 use App\Models\ProductCombination;
+use Illuminate\Support\Facades\DB;
+use Phpml\Association\Apriori;
 
 class ProductController extends Controller
 {
+
+    /**
+     * Metode untuk menjalankan analisis Apriori dan menyimpan hasilnya.
+     * Ini bisa dipicu secara manual via URL di lingkungan lokal Anda.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function runAprioriAnalysis()
+    {
+        // --- PERINGATAN ---
+        // Untuk produksi, sangat disarankan untuk memindahkan logika ini ke Laravel Command
+        // dan menjadwalkannya (Scheduling) atau menggunakan Queue untuk menghindari timeout
+        // dan menjaga performa aplikasi web Anda. Ini hanya untuk kemudahan di lokal.
+        // --- ---------- ---
+
+        // 1. Ambil data transaksi mentah dari database
+        $orders = Order::with('details.productCombination.product')->get();
+
+        $transactions = [];
+        // Buat mapping Product Name -> Product ID untuk konversi saat menyimpan
+        $productNameToIdMap = Product::pluck('id', 'name')->toArray();
+
+        foreach ($orders as $order) {
+            $itemsInTransaction = [];
+            foreach ($order->details as $detail) {
+                // Pastikan relasi ditemukan dan produk ada
+                if ($detail->productCombination && $detail->productCombination->product) {
+                    $productName = $detail->productCombination->product->name;
+                    $itemsInTransaction[] = $productName;
+                }
+            }
+            if (!empty($itemsInTransaction)) {
+                $transactions[] = $itemsInTransaction;
+            }
+        }
+
+        if (empty($transactions)) {
+            return response("Tidak ada transaksi ditemukan untuk dianalisis.", 200);
+        }
+
+        // 2. Jalankan Algoritma Apriori menggunakan PHP-ML
+        try {
+            // Panggil fungsi baru untuk PHP-ML
+            $processedRules = $this->getAprioriRulesFromPhpMl($transactions);
+        } catch (\Exception $e) {
+            \Log::error("PHP-ML Apriori Training Error: " . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+            return response("Terjadi kesalahan saat menjalankan algoritma Apriori: " . $e->getMessage(), 500);
+        }
+
+        if (empty($processedRules)) {
+            return response("Tidak ada aturan asosiasi ditemukan dengan ambang batas saat ini setelah pemrosesan.", 200);
+        }
+
+        // 3. Simpan Aturan ke Database
+        AssociationRule::truncate(); // Hapus semua aturan lama sebelum memulai transaksi baru
+
+        DB::beginTransaction(); // Mulai transaksi untuk operasi INSERT
+        try {
+            foreach ($processedRules as $rule) {
+                // Konversi nama produk di antecedent ke ID produk
+                $antecedentProductIds = [];
+                foreach ($rule['antecedent'] as $name) {
+                    if (isset($productNameToIdMap[$name])) {
+                        $antecedentProductIds[] = $productNameToIdMap[$name];
+                    }
+                }
+
+                // Konversi nama produk di consequent ke ID produk
+                $consequentProductIds = [];
+                foreach ($rule['consequent'] as $name) {
+                    if (isset($productNameToIdMap[$name])) {
+                        $consequentProductIds[] = $productNameToIdMap[$name];
+                    }
+                }
+
+                // Hanya simpan aturan jika antecedent dan consequent memiliki ID produk yang valid
+                if (!empty($antecedentProductIds) && !empty($consequentProductIds)) {
+                    AssociationRule::create([
+                        'antecedent_product_ids' => $antecedentProductIds,
+                        'antecedent_names'       => $rule['antecedent'],
+                        'consequent_product_ids' => $consequentProductIds,
+                        'consequent_names'       => $rule['consequent'],
+                        'support'                => $rule['support'],
+                        'confidence'             => $rule['confidence'],
+                        'lift'                   => $rule['lift'],
+                    ]);
+                }
+            }
+
+            DB::commit(); // Commit transaksi jika berhasil
+            return response("Analisis Apriori selesai dan " . count($processedRules) . " aturan disimpan.", 200);
+        } catch (\Exception | \Throwable $e) { // Tangkap Throwable juga untuk error fatal
+            DB::rollBack(); // Rollback transaksi jika ada error
+            \Log::error("Apriori Storage Error: " . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+            return response("Terjadi kesalahan saat menyimpan aturan: " . $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * Menggunakan PHP-ML Apriori untuk menghasilkan aturan asosiasi.
+     *
+     * @param array $transactions Contoh: [['item1', 'item2'], ['item2', 'item3'], ...]
+     * @return array Aturan asosiasi dalam format:
+     * [['antecedent' => ['item1'], 'consequent' => ['item2'], 'support' => X, 'confidence' => Y, 'lift' => Z], ...]
+     */
+    private function getAprioriRulesFromPhpMl(array $transactions): array
+    {
+        // === IMPLEMENTASI APRIORI MENGGUNAKAN PHP-ML ===
+
+        $apriori = new Apriori(
+            $support = 0.1,    // Minimum Support (contoh: 1%)
+            $confidence = 0.5   // Minimum Confidence (contoh: 50%)
+        );
+
+        // --- BARIS YANG DIPERBAIKI ---
+        // Argumen kedua adalah array kosong untuk label, karena Apriori tidak menggunakan label.
+        $apriori->train($transactions, []);
+        // --- END OF FIX ---
+
+        // Dapatkan aturan dari PHP-ML
+        $phpMlRules = $apriori->getRules();
+
+        $processedRules = [];
+        $totalTransactions = count($transactions);
+
+        foreach ($phpMlRules as $rule) {
+            $antecedent = $rule['antecedent'];
+            $consequent = $rule['consequent'];
+            $support = $rule['support'];
+            $confidence = $rule['confidence'];
+            // Hitung Lift secara manual: Lift(A -> B) = Confidence(A -> B) / Support(B)
+            $consequentCount = 0;
+            foreach ($transactions as $transaction) {
+                $allConsequentItemsPresent = true;
+                foreach ($consequent as $item) {
+                    if (!in_array($item, $transaction)) {
+                        $allConsequentItemsPresent = false;
+                        break;
+                    }
+                }
+                if ($allConsequentItemsPresent) {
+                    $consequentCount++;
+                }
+            }
+            $supportB = ($totalTransactions > 0) ? ((float) $consequentCount / $totalTransactions) : 0.0;
+            $lift = ($supportB > 0) ? ($confidence / $supportB) : 0.0;
+
+            $processedRules[] = [
+                'antecedent' => $antecedent,
+                'consequent' => $consequent,
+                'support'    => $support,
+                'confidence' => $confidence,
+                'lift'       => $lift,
+            ];
+        }
+
+        return $processedRules;
+    }
+
+    /**
+     * Menampilkan detail produk berdasarkan slug dan rekomendasi Apriori.
+     *
+     * @param Product $product (Route Model Binding akan otomatis menemukan produk berdasarkan slug)
+     * @return \Illuminate\View\View
+     */
+    public function shows(Product $product)
+    {
+        $recommendedProducts = collect();
+
+        $rulesAsAntecedent = AssociationRule::whereJsonContains('antecedent_product_ids', $product->id)
+            ->orderByDesc('confidence')
+            ->orderByDesc('lift')
+            ->limit(5)
+            ->get();
+
+        foreach ($rulesAsAntecedent as $rule) {
+            $consequentIds = $rule->consequent_product_ids;
+            $productsFromRule = Product::whereIn('id', $consequentIds)
+                ->where('id', '!=', $product->id)
+                ->get();
+            $recommendedProducts = $recommendedProducts->merge($productsFromRule);
+        }
+
+        $rulesAsConsequent = AssociationRule::whereJsonContains('consequent_product_ids', $product->id)
+            ->orderByDesc('confidence')
+            ->orderByDesc('lift')
+            ->limit(5)
+            ->get();
+
+        foreach ($rulesAsConsequent as $rule) {
+            $antecedentIds = $rule->antecedent_product_ids;
+            $productsFromRule = Product::whereIn('id', $antecedentIds)
+                ->where('id', '!=', $product->id)
+                ->get();
+            $recommendedProducts = $recommendedProducts->merge($productsFromRule);
+        }
+
+        $recommendedProducts = $recommendedProducts->unique('id')->take(4);
+
+        return view('products.show', compact('product', 'recommendedProducts'));
+    }
     /**
      * Display products by category
      */
@@ -194,6 +399,39 @@ class ProductController extends Controller
             session()->put('recently_viewed', $recentlyViewed);
         }
 
+        $recommendedProducts = collect();
+
+        $rulesAsAntecedent = AssociationRule::whereJsonContains('antecedent_product_ids', $product->id)
+            ->orderByDesc('confidence')
+            ->orderByDesc('lift')
+            ->limit(5)
+            ->get();
+
+        foreach ($rulesAsAntecedent as $rule) {
+            $consequentIds = $rule->consequent_product_ids;
+            $productsFromRule = Product::whereIn('id', $consequentIds)
+                ->where('id', '!=', $product->id)
+                ->get();
+            $recommendedProducts = $recommendedProducts->merge($productsFromRule);
+        }
+
+        $rulesAsConsequent = AssociationRule::whereJsonContains('consequent_product_ids', $product->id)
+            ->orderByDesc('confidence')
+            ->orderByDesc('lift')
+            ->limit(5)
+            ->get();
+
+        foreach ($rulesAsConsequent as $rule) {
+            $antecedentIds = $rule->antecedent_product_ids;
+            $productsFromRule = Product::whereIn('id', $antecedentIds)
+                ->where('id', '!=', $product->id)
+                ->get();
+            $recommendedProducts = $recommendedProducts->merge($productsFromRule);
+        }
+
+        $recommendedProducts = $recommendedProducts->unique('id')->take(4);
+
+
         return view('shop.product', [
             'product' => $product,
             'defaultCombination' => $defaultCombination,
@@ -204,7 +442,8 @@ class ProductController extends Controller
             'endTime' => $activeFlashSale ? $activeFlashSale->end_time : null,
             'avgRating' => $avgRating,
             'totalReviews' => $totalReviews,
-            'ratingStats' => $ratingStats
+            'ratingStats' => $ratingStats,
+            'recommendedProducts' => $recommendedProducts,
         ]);
     }
 

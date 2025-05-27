@@ -17,8 +17,10 @@ use App\Http\Controllers\Shop\WishlistController;
 | These routes are for the frontend shopping experience
 |
 */
-
+// Products & Categories
+Route::get('/apriori/train', [ProductController::class, 'runAprioriAnalysis'])->name('apriori.run');
 // Home page
+
 Route::get('/', [HomeController::class, 'index'])->name('shop.home');
 
 // Products & Categories
