@@ -28,7 +28,6 @@
                                     <th>Email</th>
                                     <th>Phone</th>
                                     <th>Role</th>
-                                    <th>Status</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
@@ -44,11 +43,7 @@
                                             {{ ucfirst($user->role) }}
                                         </span>
                                     </td>
-                                    <td>
-                                        <span class="badge bg-{{ $user->is_active ? 'success' : 'danger' }}">
-                                            {{ $user->is_active ? 'Active' : 'Inactive' }}
-                                        </span>
-                                    </td>
+
                                     <td>
                                         <div class="d-flex gap-1">
                                             <a href="{{ route('admin.users.show', $user) }}" class="btn btn-sm btn-info">

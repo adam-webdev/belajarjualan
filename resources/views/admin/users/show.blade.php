@@ -37,12 +37,7 @@
                         <li class="nav-item" role="presentation">
                             <button class="nav-link" id="orders-tab" data-bs-toggle="tab" data-bs-target="#orders" type="button" role="tab">Orders</button>
                         </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="wishlist-tab" data-bs-toggle="tab" data-bs-target="#wishlist" type="button" role="tab">Wishlist</button>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="reviews-tab" data-bs-toggle="tab" data-bs-target="#reviews" type="button" role="tab">Reviews</button>
-                        </li>
+
                     </ul>
                     <div class="tab-content" id="myTabContent">
                         <!-- Details Tab -->
@@ -78,19 +73,13 @@
                                     </span>
                                 </div>
 
-                                <div class="col-md-4">
-                                    <label class="fw-bold">Status:</label>
-                                </div>
-                                <div class="col-md-8">
-                                    <span class="badge bg-{{ $user->is_active ? 'success' : 'danger' }}">
-                                        {{ $user->is_active ? 'Active' : 'Inactive' }}
-                                    </span>
-                                </div>
 
-                                <div class="col-md-4">
+
+
+                                <div class="col-md-4 mt-2">
                                     <label class="fw-bold">Created At:</label>
                                 </div>
-                                <div class="col-md-8">
+                                <div class="col-md-8 mt-2">
                                     <p>{{ $user->created_at->format('d M Y H:i') }}</p>
                                 </div>
 
@@ -182,32 +171,7 @@
                             </div>
                         </div>
 
-                        <div class="tab-pane fade" id="wishlist" role="tabpanel">
-                            <div class="table-responsive mt-3">
-                                <table class="table table-hover mb-0">
-                                    <thead>
-                                        <tr>
-                                            <th>Product</th>
-                                            <th>Price</th>
-                                            <th>Added Date</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @forelse($user->wishlists as $item)
-                                        <tr>
-                                            <td>{{ $item->productCombination->product->name ?? 'Product not found' }}</td>
-                                            <td>Rp {{ number_format($item->productCombination->price ?? 0, 0, ',', '.') }}</td>
-                                            <td>{{ $item->created_at->format('d M Y H:i') }}</td>
-                                        </tr>
-                                        @empty
-                                        <tr>
-                                            <td colspan="3" class="text-center">No wishlist items found</td>
-                                        </tr>
-                                        @endforelse
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
+
 
                         <div class="tab-pane fade" id="reviews" role="tabpanel">
                             <div class="table-responsive mt-3">

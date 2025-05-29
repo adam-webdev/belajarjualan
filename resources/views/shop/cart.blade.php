@@ -211,7 +211,7 @@
                 <div class="product-card">
                     <div class="position-relative">
                         @if($product->images->count() > 0)
-                            <img src="{{ asset('storage/' . $product->images->first()->path) }}" class="card-img-top product-img" alt="{{ $product->name }}">
+                            <img src="{{ asset('storage/' . $product->images->first()->image_path) }}" class="card-img-top product-img" alt="{{ $product->name }}">
                         @else
                             <img src="https://via.placeholder.com/300x300?text={{ $product->name }}" class="card-img-top product-img" alt="{{ $product->name }}">
                         @endif
