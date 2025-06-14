@@ -296,10 +296,10 @@
             <footer>
                 <div class="footer clearfix mb-0 text-muted">
                     <div class="float-start">
-                        <p>2024 &copy; Apriori</p>
+                        <p>2025 &copy; Apriori Thrift Shop</p>
                     </div>
                     <div class="float-end">
-                        <p>Crafted with <span class="text-danger"><i class="bi bi-heart"></i></span> by <a href="#">Apriori Team</a></p>
+                        <p>Created <span class="text-danger"><i class="bi bi-heart"></i></span> by <a href="#">Ananda Dae</a></p>
                     </div>
                 </div>
             </footer>
